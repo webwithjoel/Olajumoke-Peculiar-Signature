@@ -117,8 +117,6 @@ button { font: inherit; }
 .button-gold:hover, .button-ghost:hover { transform: translateY(-2px); }
 .button-gold:hover { background: hsl(39 55% 63%); }
 .button-ghost:hover { color: hsl(var(--primary)); border-color: hsl(var(--primary)); }
-.hero-stamp { position: absolute; z-index: 1; right: 6vw; bottom: 8%; display: grid; place-items: center; width: 108px; height: 108px; border: 1px solid hsl(var(--primary) / .65); border-radius: 50%; color: hsl(var(--primary)); font-family: var(--app-font-serif); font-size: 1.1rem; line-height: 1; text-align: center; transform: rotate(13deg); }
-.hero-stamp small { display: block; font-family: var(--app-font-sans); font-size: .46rem; letter-spacing: .14em; text-transform: uppercase; }
 
 .intro { background: hsl(var(--background)); }
 .intro-grid { display: grid; grid-template-columns: minmax(180px, .7fr) minmax(0, 1.4fr); gap: clamp(36px, 8vw, 120px); align-items: start; }
@@ -249,7 +247,6 @@ button { font: inherit; }
   .hero-photo { inset: 0; opacity: .67; }
   .hero::after { background: linear-gradient(0deg, #17120f 8%, rgba(23,18,15,.52) 60%, rgba(23,18,15,.22) 100%); }
   .hero h1 { font-size: clamp(3.5rem, 17vw, 6rem); }
-  .hero-stamp { right: 20px; top: 120px; bottom: auto; width: 82px; height: 82px; font-size: .9rem; }
   .intro-grid, .bespoke-grid, .about-grid { grid-template-columns: 1fr; gap: 38px; }
   .intro h2 { max-width: 310px; }
   .band-heading, .lookbook-intro, .testimonial-heading { display: block; }

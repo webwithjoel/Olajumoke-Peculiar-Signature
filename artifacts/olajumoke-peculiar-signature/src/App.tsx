@@ -16,7 +16,7 @@ import {
 
 import logo from '@assets/facebook_1789877054235_7507288488086170700_1789913660928.jpg';
 import heroPortrait from '@assets/grok_1789900297954_1789913661002.jpg';
-import streetPortrait from '@assets/grok_1789900238954_1789913660971.jpg';
+import olajumokePortrait from '@assets/grok_1789909975867_1789914950678.jpg';
 import burgundyLook from '@assets/grok_1789909921138_1789913661040.jpg';
 import aquaLook from '@assets/grok_1789909975867_1789913661079.jpg';
 import purplePortrait from '@assets/grok_1789909998342_1789913687121.jpg';
@@ -470,10 +470,6 @@ function Home() {
               </a>
             </div>
           </div>
-          <div className="hero-stamp" aria-hidden="true">
-            <span>OP</span>
-            <small>made in Ile-Ife</small>
-          </div>
         </section>
 
         <section className="possibilities section-space" id="bespoke" aria-labelledby="possibilities-title">
@@ -608,7 +604,7 @@ function Home() {
         <section className="about section-space" id="about" aria-labelledby="about-title">
           <div className="section-shell about-grid">
             <div className="about-image">
-              <img src={streetPortrait} alt="Olajumoke in a colourful printed dress on a street" loading="lazy" />
+              <img src={olajumokePortrait} alt="Olajumoke in a turquoise embellished outfit" loading="lazy" />
             </div>
             <div className="about-copy">
               <p className="eyebrow">The woman behind the signature</p>
