@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Olajumoke Peculiar Signature"
+description = "A premium Nigerian fashion atelier homepage for Olajumoke Peculiar Signature, showcasing bespoke looks, a curated lookbook, and WhatsApp-led enquiries."
+version = "1.0.0"
+id = "artifacts/olajumoke-peculiar-signature"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25934
+
+[services.development]
+run = "pnpm --filter @workspace/olajumoke-peculiar-signature run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/olajumoke-peculiar-signature", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/olajumoke-peculiar-signature/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25934"
+BASE_PATH = "/"

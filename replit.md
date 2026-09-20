@@ -1,6 +1,6 @@
-# [Project name]
+# Olajumoke Peculiar Signature
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Premium showroom homepage for a Nigerian fashion atelier in Ile-Ife, focused on editorial storytelling and WhatsApp-led bespoke enquiries.
 
 ## Run & Operate
 
@@ -22,15 +22,23 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/olajumoke-peculiar-signature/src/App.tsx` — homepage content, navigation, lookbook lightbox, and WhatsApp actions
+- `artifacts/olajumoke-peculiar-signature/src/index.css` — atelier visual system, responsive layout, and motion states
+- `attached_assets/` — supplied logo, flyer, portraits, featured looks, and lookbook imagery
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- This is a frontend-only showroom experience; no ecommerce catalog, cart, pricing, or backend is used.
+- WhatsApp is the primary conversion path for both bespoke enquiries and lookbook conversations.
+- Lookbook imagery opens in an accessible keyboard- and swipe-friendly lightbox; featured look selection is intentionally reserved for a later prompt.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- Responsive editorial homepage for Olajumoke Peculiar Signature
+- Collections discovery across bridal, celebration, corporate, and headpiece moments
+- Featured looks and a full-screen Peculiar Lookbook
+- WhatsApp-led custom request and look-specific enquiry CTAs
+- Atelier story, client testimonials, contact location, and phone details
 
 ## User preferences
 
