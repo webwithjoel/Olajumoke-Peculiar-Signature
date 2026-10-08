@@ -4,12 +4,17 @@ Premium showroom homepage for a Nigerian fashion atelier in Ile-Ife, focused on 
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `pnpm install --frozen-lockfile` — install the imported workspace dependencies
+- Start the managed workflow `artifacts/olajumoke-peculiar-signature: web` in Replit to run the website at `/`. It supplies `PORT` and `BASE_PATH` automatically.
+- Outside Replit: `PORT=5173 BASE_PATH=/ pnpm --filter @workspace/olajumoke-peculiar-signature run dev`
+- `pnpm --filter @workspace/olajumoke-peculiar-signature run typecheck` — check the website
+- `PORT=5173 BASE_PATH=/ pnpm --filter @workspace/olajumoke-peculiar-signature run build` — build the website to `artifacts/olajumoke-peculiar-signature/dist/public`
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- The website needs no secrets, database, or API server. The imported API and canvas packages are retained but are not started for the showroom.
+- `DATABASE_URL` is only needed if you separately enable the unused API/database packages.
 
 ## Stack
 
@@ -28,7 +33,7 @@ Premium showroom homepage for a Nigerian fashion atelier in Ile-Ife, focused on 
 
 ## Architecture decisions
 
-- This is a frontend-only showroom experience; no ecommerce catalog, cart, pricing, or backend is used.
+- This is a frontend-only showroom experience with ready-to-wear browsing and a local browser cart; checkout enquiries go to WhatsApp rather than a backend or payment processor.
 - WhatsApp is the primary conversion path for both bespoke enquiries and lookbook conversations.
 - Lookbook imagery opens in an accessible keyboard- and swipe-friendly lightbox; featured look selection is intentionally reserved for a later prompt.
 
