@@ -12,6 +12,7 @@ import {
   Sparkles,
   X,
 } from 'lucide-react';
+import { Link, Route, Switch, useLocation } from 'wouter';
 
 import logo from '@assets/facebook_1789877054235_7507288488086170700_1789913660928.jpg';
 import heroPortrait from '@assets/grok_1789900297954_1789913661002.jpg';
@@ -28,11 +29,16 @@ import bridalGroup from '@assets/grok_1789910479780_1789913728061.jpg';
 import limeLook from '@assets/grok_1789910590729_1789913728021.jpg';
 import asoEbi from '@assets/grok_1789910981424_1789913727983.jpg';
 import sequinDetail from '@assets/grok_1789911010662_1789913727831.jpg';
+import NotFound from '@/pages/not-found';
+import ReadyToWearPage, { type ReadyToWearProduct } from '@/pages/ready-to-wear';
 
 type Look = {
   image: string;
   alt: string;
+  id?: string;
   title?: string;
+  description?: string;
+  priceLabel?: string;
 };
 
 type CartItem = Look & {
@@ -213,6 +219,64 @@ const categories = [
   },
 ];
 
+const readyToWearProducts: ReadyToWearProduct[] = [
+  {
+    id: 'bridal-lavender-party',
+    slug: 'bridal',
+    category: 'bridal',
+    categoryLabel: 'Bridal',
+    title: 'Lavender Bridal Party Look',
+    image: bridalGroup,
+    alt: 'Bridal party in coordinated lavender looks',
+    description: 'For the bride and every beautiful moment around her.',
+    priceLabel: 'Price on request',
+  },
+  {
+    id: 'owambe-purple-traditional',
+    slug: 'owambe-traditional',
+    category: 'owambe-traditional',
+    categoryLabel: 'Owambe & Traditional',
+    title: 'Purple Traditional Look',
+    image: purpleTraditional,
+    alt: 'Woman in a richly embroidered purple traditional outfit',
+    description: 'Traditional styles for celebrations and special moments.',
+    priceLabel: 'Price on request',
+  },
+  {
+    id: 'dinner-lime-celebration',
+    slug: 'dinner-special-occasions',
+    category: 'dinner-special-occasions',
+    categoryLabel: 'Dinner & Special Occasions',
+    title: 'Lime Celebration Look',
+    image: limeLook,
+    alt: 'Woman in a lime green lace evening gown with a matching gele',
+    description: 'Considered looks for evenings and occasions worth remembering.',
+    priceLabel: 'Price on request',
+  },
+  {
+    id: 'corporate-purple-structured',
+    slug: 'corporate-formal',
+    category: 'corporate-formal',
+    categoryLabel: 'Corporate & Formal',
+    title: 'Purple Structured Look',
+    image: purplePortrait,
+    alt: 'Woman in a purple structured dress',
+    description: 'Elegant fashion for work, formal occasions and everything in between.',
+    priceLabel: 'Price on request',
+  },
+  {
+    id: 'headpieces-aqua-peplum',
+    slug: 'headpieces-fascinators',
+    category: 'headpieces-fascinators',
+    categoryLabel: 'Headpieces & Fascinators',
+    title: 'Aqua Peplum Look',
+    image: aquaLook,
+    alt: 'Woman in a turquoise look with a sculptural headpiece',
+    description: 'Fascinators, hatinators and statement headpieces to complete the look.',
+    priceLabel: 'Price on request',
+  },
+];
+
 function scrollToSection(id: string, closeMenu?: () => void) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
   closeMenu?.();
@@ -221,27 +285,31 @@ function scrollToSection(id: string, closeMenu?: () => void) {
 function Nav({
   cartCount,
   onOpenCart,
+  isCollectionPage,
 }: {
   cartCount: number;
   onOpenCart: () => void;
+  isCollectionPage: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const close = () => setMenuOpen(false);
   const links = [
-    ['Home', routeBase],
-    ['Ready-to-Wear', readyToWearHref],
-    ['Customize a Look', customizeLookHref],
-    ['About / Contact', '#about'],
+    { label: 'Home', href: routeBase, anchor: false },
+    { label: 'Ready-to-Wear', href: readyToWearHref, anchor: false },
+    { label: 'Customize a Look', href: customizeLookHref, anchor: false },
+    { label: 'About / Contact', href: isCollectionPage ? `${routeBase}#about` : '#about', anchor: true },
   ];
 
   return (
-    <header className="site-header">
+    <header className={`site-header${isCollectionPage ? ' site-header-light site-header-collection' : ''}`}>
       <div className="section-shell nav-wrap">
-        <button
+        <Link
           className="brand-lockup"
+          href={routeBase}
           onClick={() => {
-            window.location.hash = 'home';
-            document.getElementById('home')?.scrollIntoView({ behavior: 'smooth' });
+            if (!isCollectionPage) {
+              document.getElementById('home')?.scrollIntoView({ behavior: 'smooth' });
+            }
             close();
           }}
           aria-label="Olajumoke Peculiar Signature home"
@@ -253,17 +321,26 @@ function Nav({
             <br />
             Peculiar Signature
           </span>
-        </button>
+        </Link>
         <nav className="desktop-nav" aria-label="Main navigation">
-          {links.map(([label, id]) => (
+          {links.map(({ label, href, anchor }) => anchor ? (
             <a
-              key={id}
-              href={id}
+              key={label}
+              href={href}
               onClick={close}
               data-testid={`link-nav-${label.toLowerCase().replaceAll(/[^a-z]+/g, '-')}`}
             >
               {label}
             </a>
+          ) : (
+            <Link
+              key={label}
+              href={href}
+              onClick={close}
+              data-testid={`link-nav-${label.toLowerCase().replaceAll(/[^a-z]+/g, '-')}`}
+            >
+              {label}
+            </Link>
           ))}
           <a
             className="nav-my-looks nav-cart-link"
@@ -279,26 +356,47 @@ function Nav({
             {cartCount > 0 && <span>{cartCount}</span>}
           </a>
         </nav>
-        <button
-          className="nav-toggle"
-          onClick={() => setMenuOpen(!menuOpen)}
-          aria-expanded={menuOpen}
-          aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}
-          data-testid="button-mobile-menu"
-        >
-          {menuOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
+        <div className="mobile-header-actions">
+          <button
+            type="button"
+            className="mobile-cart-button"
+            onClick={onOpenCart}
+            aria-label={cartCount > 0 ? `Open cart, ${cartCount} items` : 'Open cart'}
+            data-testid="button-mobile-cart"
+          >
+            <ShoppingBag size={21} />
+            {cartCount > 0 && <span className="mobile-cart-count">{cartCount}</span>}
+          </button>
+          <button
+            className="nav-toggle"
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-expanded={menuOpen}
+            aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+            data-testid="button-mobile-menu"
+          >
+            {menuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        </div>
         {menuOpen && (
           <nav className="mobile-menu" aria-label="Mobile navigation">
-            {links.map(([label, href]) => (
+            {links.map(({ label, href, anchor }) => anchor ? (
               <a
-                key={href}
+                key={label}
                 href={href}
                 onClick={close}
                 data-testid={`link-mobile-${label.toLowerCase().replaceAll(/[^a-z]+/g, '-')}`}
               >
                 {label}
               </a>
+            ) : (
+              <Link
+                key={label}
+                href={href}
+                onClick={close}
+                data-testid={`link-mobile-${label.toLowerCase().replaceAll(/[^a-z]+/g, '-')}`}
+              >
+                {label}
+              </Link>
             ))}
             <a
               href="#cart"
@@ -315,6 +413,48 @@ function Nav({
         )}
       </div>
     </header>
+  );
+}
+
+function SiteFooter({ onOpenCart }: { onOpenCart: () => void }) {
+  return (
+    <footer className="site-footer">
+      <div className="section-shell footer-top">
+        <div className="footer-brand">
+          <img src={logo} alt="Olajumoke Peculiar Signature logo" loading="lazy" />
+          <p>
+            Bespoke and ready-to-wear fashion for weddings, celebrations, special
+            occasions and every moment worth making a statement.
+          </p>
+        </div>
+        <div className="footer-col">
+          <h3>Explore</h3>
+          <Link href={routeBase}>Home</Link>
+          <Link href={readyToWearHref}>Ready-to-Wear</Link>
+          <Link href={customizeLookHref}>Customize a Look</Link>
+          <a href={`${routeBase}#about`}>About / Contact</a>
+          <a
+            href="#cart"
+            onClick={(event) => {
+              event.preventDefault();
+              onOpenCart();
+            }}
+          >
+            Cart
+          </a>
+        </div>
+        <div className="footer-col" id="contact">
+          <h3>Contact</h3>
+          <a href={directWhatsAppHref} target="_blank" rel="noreferrer">Chat on WhatsApp</a>
+          <p>Opposite Olasode Junction, Ile-Ife, Osun State</p>
+          <a href="tel:+2348035493448">+234 803 549 3448</a>
+        </div>
+      </div>
+      <div className="section-shell footer-bottom">
+        <span>© 2026 Olajumoke Peculiar Signature. All rights reserved.</span>
+        <span>Made in Ile-Ife, Nigeria</span>
+      </div>
+    </footer>
   );
 }
 
@@ -335,9 +475,9 @@ function PossibilityCard({
       <ol className="possibility-steps">
         {steps.map((step) => <li key={step}>{step}</li>)}
       </ol>
-      <a className="possibility-cta" href={href}>
+      <Link className="possibility-cta" href={href}>
         {action} <MoveUpRight size={14} />
-      </a>
+      </Link>
     </article>
   );
 }
@@ -350,14 +490,14 @@ function CategoryCard({
   alt,
 }: (typeof categories)[number]) {
   return (
-    <a className="category-card" href={getCategoryHref(slug)} aria-label={`Browse ${title} ready-to-wear`}>
+    <Link className="category-card" href={getCategoryHref(slug)} aria-label={`Browse ${title} ready-to-wear`}>
       <img src={image} alt={alt} loading="lazy" />
       <span className="category-overlay">
         <strong>{title}</strong>
         <small>{copy}</small>
         <span className="category-card-action">Explore category <ArrowRight size={16} /></span>
       </span>
-    </a>
+    </Link>
   );
 }
 
@@ -482,8 +622,8 @@ function CartModal({
           <div className="cart-empty">
             <ShoppingBag size={30} />
             <h3 className="serif">Your cart is waiting for a look.</h3>
-            <p>Explore the featured ready-to-wear looks and select one to begin.</p>
-            <a className="button-gold" href={readyToWearHref}>Explore Ready-to-Wear <MoveUpRight size={15} /></a>
+            <p>Browse the ready-to-wear collections and select a look to begin.</p>
+            <Link className="button-gold" href={readyToWearHref}>Explore Ready-to-Wear <MoveUpRight size={15} /></Link>
           </div>
         ) : (
           <form className="cart-content" onSubmit={onSubmit}>
@@ -494,7 +634,8 @@ function CartModal({
                   <div className="cart-item-copy">
                     <span className="eyebrow">Selected look</span>
                     <h3 className="serif">{lookName(item)}</h3>
-                    <p>{item.alt}</p>
+                    <p>{item.description ?? item.alt}</p>
+                    {item.priceLabel && <p className="cart-item-price">{item.priceLabel}</p>}
                     <div className="cart-item-controls">
                       <div className="quantity-control" aria-label={`Quantity for ${lookName(item)}`}>
                         <button type="button" aria-label="Decrease quantity" onClick={() => onQuantityChange(item.id, item.quantity - 1)}>
@@ -670,6 +811,10 @@ function Lightbox({
 }
 
 function Home() {
+  const [location] = useLocation();
+  const currentPath = location.split(/[?#]/, 1)[0].replace(/\/+$/, '') || '/';
+  const collectionPath = readyToWearHref.replace(/\/+$/, '') || '/';
+  const isCollectionPage = currentPath === collectionPath;
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [selectedLook, setSelectedLook] = useState<Look | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
@@ -695,6 +840,7 @@ function Home() {
   });
   const lookbookTrackRef = useRef<HTMLDivElement>(null);
   const reviewTrackRef = useRef<HTMLDivElement>(null);
+  const cartCount = cartItems.reduce((total, item) => total + item.quantity, 0);
 
   useEffect(() => {
     window.localStorage.setItem(cartStorageKey, JSON.stringify(cartItems));
@@ -705,9 +851,13 @@ function Home() {
   }, [checkout]);
 
   useEffect(() => {
-    document.title = 'Olajumoke Peculiar Signature | Bespoke Fashion in Ile-Ife';
-    const description =
-      'Olajumoke Peculiar Signature is a premium Nigerian women’s fashion atelier in Ile-Ife, creating bespoke and ready-to-wear fashion for every moment worth making a statement.';
+    const pageTitle = isCollectionPage
+      ? 'Ready-to-Wear | Olajumoke Peculiar Signature'
+      : 'Olajumoke Peculiar Signature | Bespoke Fashion in Ile-Ife';
+    const description = isCollectionPage
+      ? 'Explore our curated collection of Peculiar looks, created for moments worth making a statement.'
+      : 'Olajumoke Peculiar Signature is a premium Nigerian women’s fashion atelier in Ile-Ife, creating bespoke and ready-to-wear fashion for every moment worth making a statement.';
+    document.title = pageTitle;
     let meta = document.querySelector('meta[name="description"]');
     if (!meta) {
       meta = document.createElement('meta');
@@ -724,22 +874,22 @@ function Home() {
       }
       og.setAttribute('content', content);
     };
-    setOg('og:title', 'Olajumoke Peculiar Signature | Bespoke Fashion in Ile-Ife');
+    setOg('og:title', pageTitle);
     setOg('og:description', description);
     setOg('og:type', 'website');
     setOg('og:image', logo);
-  }, []);
+  }, [isCollectionPage]);
 
-  const addToCart = (look: Look) => {
+  const addToCart = (look: Look, openCart = true) => {
     setCartItems((current) => {
       const existing = current.find((item) => item.image === look.image);
       return existing
         ? current.map((item) => item.image === look.image ? { ...item, quantity: item.quantity + 1 } : item)
-        : [...current, { ...look, id: look.image, quantity: 1 }];
+        : [...current, { ...look, id: look.id ?? look.image, quantity: 1 }];
     });
     setSelectedLook(null);
     setCheckoutError('');
-    setCartOpen(true);
+    if (openCart) setCartOpen(true);
   };
 
   const updateQuantity = (id: string, quantity: number) => {
@@ -806,11 +956,14 @@ Please confirm the order details with me. Thank you.`;
     );
 
   return (
-    <div className="atelier-page">
+    <div className={`atelier-page${isCollectionPage ? ' atelier-page-collection' : ''}`}>
       <Nav
-        cartCount={cartItems.reduce((total, item) => total + item.quantity, 0)}
+        cartCount={cartCount}
         onOpenCart={() => setCartOpen(true)}
+        isCollectionPage={isCollectionPage}
       />
+      <Switch>
+        <Route path={routeBase}>
       <main>
         <section className="hero" id="home" aria-labelledby="hero-title">
           <div className="hero-photo">
@@ -831,20 +984,20 @@ Please confirm the order details with me. Thank you.`;
               special occasions and every moment worth making a statement.
             </p>
             <div className="hero-actions">
-              <a
+              <Link
                 className="button-gold"
                 href={readyToWearHref}
                 data-testid="button-hero-collections"
               >
                 Explore Our Looks <MoveUpRight size={15} />
-              </a>
-              <a
+              </Link>
+              <Link
                 className="button-ghost"
                 href={customizeLookHref}
                 data-testid="link-hero-customize"
               >
                 Customize a Look
-              </a>
+              </Link>
             </div>
           </div>
         </section>
@@ -920,9 +1073,9 @@ Please confirm the order details with me. Thank you.`;
               <p className="make-it-yours-examples">
                 Small adjustments can include changing long sleeves to short sleeves, adding a bottom slit to a gown, or adding stones to a gele. We focus on thoughtful changes to existing Peculiar designs.
               </p>
-              <a className="button-gold" href={customizeLookHref}>
+              <Link className="button-gold" href={customizeLookHref}>
                 Customize a Look <MoveUpRight size={15} />
-              </a>
+              </Link>
             </div>
             <div className="make-it-yours-image">
               <img src={blackRedLook} alt="A Peculiar ready-to-wear design with considered tailoring details" loading="lazy" />
@@ -1052,45 +1205,27 @@ Please confirm the order details with me. Thank you.`;
             Choose an existing Peculiar design and request a small adjustment to make the look feel like your own.
           </p>
           <div className="final-actions">
-            <a className="button-ghost" href={customizeLookHref}>
+            <Link className="button-ghost" href={customizeLookHref}>
               Customize a Look
-            </a>
-            <a className="button-ghost" href={readyToWearHref}>
+            </Link>
+            <Link className="button-ghost" href={readyToWearHref}>
               Explore Ready-to-Wear
-            </a>
+            </Link>
           </div>
         </section>
       </main>
-
-      <footer className="site-footer">
-        <div className="section-shell footer-top">
-          <div className="footer-brand">
-            <img src={logo} alt="Olajumoke Peculiar Signature logo" loading="lazy" />
-            <p>
-              Bespoke and ready-to-wear fashion for weddings, celebrations, special
-              occasions and every moment worth making a statement.
-            </p>
-          </div>
-          <div className="footer-col">
-            <h3>Explore</h3>
-            <a href={routeBase}>Home</a>
-            <a href={readyToWearHref}>Ready-to-Wear</a>
-            <a href={customizeLookHref}>Customize a Look</a>
-            <a href="#about">About / Contact</a>
-            <a href="#cart" onClick={(event) => { event.preventDefault(); setCartOpen(true); }}>Cart</a>
-          </div>
-          <div className="footer-col" id="contact">
-            <h3>Contact</h3>
-            <a href={directWhatsAppHref} target="_blank" rel="noreferrer">Chat on WhatsApp</a>
-            <p>Opposite Olasode Junction, Ile-Ife, Osun State</p>
-            <a href="tel:+2348035493448">+234 803 549 3448</a>
-          </div>
-        </div>
-        <div className="section-shell footer-bottom">
-          <span>© 2026 Olajumoke Peculiar Signature. All rights reserved.</span>
-          <span>Made in Ile-Ife, Nigeria</span>
-        </div>
-      </footer>
+        </Route>
+        <Route path={readyToWearHref}>
+          <ReadyToWearPage
+            products={readyToWearProducts}
+            onAddToCart={(product) => addToCart(product, false)}
+            onOpenCart={() => setCartOpen(true)}
+            cartCount={cartCount}
+          />
+        </Route>
+        <Route component={NotFound} />
+      </Switch>
+      <SiteFooter onOpenCart={() => setCartOpen(true)} />
 
       <a
         className="floating-whatsapp"
