@@ -212,7 +212,11 @@ export default function ReadyToWearPage({
     const tabBounds = activeTab.getBoundingClientRect();
     const trackBounds = track.getBoundingClientRect();
     if (tabBounds.left < trackBounds.left || tabBounds.right > trackBounds.right) {
-      activeTab.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      const tabOffset = tabBounds.left - trackBounds.left;
+      track.scrollTo({
+        left: track.scrollLeft + tabOffset - (track.clientWidth - activeTab.clientWidth) / 2,
+        behavior: 'smooth',
+      });
     }
   }, [activeCategory]);
 

@@ -28,7 +28,7 @@ const adjustmentSuggestions = [
   'Add or adjust a gown slit',
   'Add stones or embellishments',
   'Minor length adjustment',
-  'Other small adjustment',
+  'Other adjustment',
 ];
 
 const steps = [
@@ -40,7 +40,7 @@ const steps = [
   {
     number: '02',
     title: 'Tell Us Your Changes',
-    copy: 'Describe the small adjustment you’d like us to make.',
+    copy: 'Describe the adjustment you’d like us to make.',
   },
   {
     number: '03',
@@ -146,9 +146,9 @@ function RequestForm({
               rows={4}
               value={requestedChanges}
               onChange={(event) => setRequestedChanges(event.target.value)}
-              placeholder="Describe the small adjustment you'd like us to make to this look..."
+              placeholder="Describe the adjustment you'd like us to make to this look..."
             />
-            <small>Please keep your request to small adjustments to the selected design.</small>
+            <small>Please keep your request to adjustments to the selected design.</small>
           </label>
 
           <div className="customize-form-grid">
@@ -230,11 +230,18 @@ export default function CustomizePage({ products, readyToWearHref, onAddCustomiz
   }, [selectedProduct]);
 
   useEffect(() => {
-    document.getElementById(`customize-category-${activeCategory}`)?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'nearest',
-      inline: 'center',
-    });
+    const activeTab = document.getElementById(`customize-category-${activeCategory}`);
+    const track = activeTab?.parentElement;
+    if (!activeTab || !(track instanceof HTMLElement)) return;
+    const tabBounds = activeTab.getBoundingClientRect();
+    const trackBounds = track.getBoundingClientRect();
+    if (tabBounds.left < trackBounds.left || tabBounds.right > trackBounds.right) {
+      const tabOffset = tabBounds.left - trackBounds.left;
+      track.scrollTo({
+        left: track.scrollLeft + tabOffset - (track.clientWidth - activeTab.clientWidth) / 2,
+        behavior: 'smooth',
+      });
+    }
   }, [activeCategory]);
 
   const chooseProduct = (product: ReadyToWearProduct) => {
@@ -255,10 +262,10 @@ export default function CustomizePage({ products, readyToWearHref, onAddCustomiz
           <p className="customize-kicker">Olajumoke Peculiar Signature · Ile-Ife</p>
           <h1 id="customize-title" className="customize-title serif">Customize <em>a Look.</em></h1>
           <p className="customize-intro-copy">
-            Love one of our designs but have a small change in mind? Tell us what you'd like adjusted, and let's make the look feel more like you.
+            Love one of our designs but have a change in mind? Tell us what you'd like adjusted, and let's make the look feel more like you.
           </p>
           <p className="customize-intro-note">
-            Our customization service is for small adjustments to selected Ready-to-Wear designs. Availability depends on the design and the changes requested.
+            Our customization service is for adjustments to selected Ready-to-Wear designs. Availability depends on the design and the changes requested.
           </p>
           <Link className="button-gold customize-explore" href={readyToWearHref}>
             Explore Ready-to-Wear <ArrowRight size={15} />

@@ -32,6 +32,7 @@ import sequinDetail from '@assets/grok_1789911010662_1789913727831.jpg';
 import NotFound from '@/pages/not-found';
 import CustomizePage, { type CustomizationRequest } from '@/pages/customize-a-look';
 import ReadyToWearPage, { type ReadyToWearProduct } from '@/pages/ready-to-wear';
+import AboutContactPage from '@/pages/about-contact';
 
 type Look = {
   image: string;
@@ -68,6 +69,14 @@ const routeBase = import.meta.env.BASE_URL.endsWith('/')
   : `${import.meta.env.BASE_URL}/`;
 const readyToWearHref = `${routeBase}ready-to-wear`;
 const customizeLookHref = `${routeBase}customize-a-look`;
+const aboutContactHref = `${routeBase}about-contact`;
+const aboutStoryEyebrow = 'The woman behind the signature';
+const aboutStoryTitle = 'Meet Olajumoke.';
+const aboutStoryImageAlt = 'Olajumoke in a turquoise embellished outfit';
+const aboutStoryParagraphs: string[] = [
+  'Behind every Peculiar look is a desire to help you stand out, feel confident and make a lasting impression.',
+  'From carefully considered details to the final look, Olajumoke Peculiar Signature brings together fashion, individuality and the beauty of dressing for the moment.',
+];
 
 const emptyCheckout: CartCheckoutData = {
   expectedDate: '',
@@ -176,7 +185,7 @@ const possibilities = [
   {
     icon: Palette,
     title: 'Customize a Look',
-    copy: 'Like a piece, but would like to make a small adjustment? Let us know.',
+    copy: 'Like a piece, but would like to make an adjustment? Let us know.',
     steps: ['Pick the look', 'Describe the changes you’d like', 'Review your request', 'Send on WhatsApp'],
     action: 'Customize a Look',
     href: customizeLookHref,
@@ -288,10 +297,12 @@ function Nav({
   cartCount,
   onOpenCart,
   isCollectionPage,
+  isAboutPage,
 }: {
   cartCount: number;
   onOpenCart: () => void;
   isCollectionPage: boolean;
+  isAboutPage: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const close = () => setMenuOpen(false);
@@ -299,7 +310,7 @@ function Nav({
     { label: 'Home', href: routeBase, anchor: false },
     { label: 'Ready-to-Wear', href: readyToWearHref, anchor: false },
     { label: 'Customize a Look', href: customizeLookHref, anchor: false },
-    { label: 'About / Contact', href: isCollectionPage ? `${routeBase}#about` : '#about', anchor: true },
+    { label: 'About / Contact', href: isAboutPage ? '#about-contact-enquiry' : aboutContactHref, anchor: isAboutPage },
   ];
 
   return (
@@ -434,7 +445,7 @@ function SiteFooter({ onOpenCart }: { onOpenCart: () => void }) {
           <Link href={routeBase}>Home</Link>
           <Link href={readyToWearHref}>Ready-to-Wear</Link>
           <Link href={customizeLookHref}>Customize a Look</Link>
-          <a href={`${routeBase}#about`}>About / Contact</a>
+          <Link href={aboutContactHref}>About / Contact</Link>
           <a
             href="#cart"
             onClick={(event) => {
@@ -640,7 +651,7 @@ function CartModal({
                     {item.priceLabel && <p className="cart-item-price">{item.priceLabel} · {item.quantity} {item.quantity === 1 ? 'look' : 'looks'}</p>}
                     {item.customization && (
                       <div className="cart-customization-details">
-                        <p><strong>Requested change:</strong> {item.customization.adjustmentType || 'Small adjustment'} — {item.customization.requestedChanges}</p>
+                        <p><strong>Requested change:</strong> {item.customization.adjustmentType || 'Adjustment'} — {item.customization.requestedChanges}</p>
                         <p><strong>Size / measurements:</strong> {item.customization.sizePreference || 'To discuss'}</p>
                         <p><strong>Expected date:</strong> {formatDate(item.customization.expectedDate)}</p>
                         <p><strong>Customer:</strong> {item.customization.customerName} · {item.customization.whatsapp}</p>
@@ -818,9 +829,11 @@ function Home() {
   const currentPath = location.split(/[?#]/, 1)[0].replace(/\/+$/, '') || '/';
   const collectionPath = readyToWearHref.replace(/\/+$/, '') || '/';
   const customizePath = customizeLookHref.replace(/\/+$/, '') || '/';
+  const aboutContactPath = aboutContactHref.replace(/\/+$/, '') || '/';
   const isCollectionPage = currentPath === collectionPath;
   const isCustomizePage = currentPath === customizePath;
-  const isEditorialSubpage = isCollectionPage || isCustomizePage;
+  const isAboutPage = currentPath === aboutContactPath;
+  const isEditorialSubpage = isCollectionPage || isCustomizePage || isAboutPage;
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [selectedLook, setSelectedLook] = useState<Look | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
@@ -861,12 +874,16 @@ function Home() {
       ? 'Ready-to-Wear | Olajumoke Peculiar Signature'
       : isCustomizePage
         ? 'Customize a Look | Olajumoke Peculiar Signature'
-        : 'Olajumoke Peculiar Signature | Bespoke Fashion in Ile-Ife';
+        : isAboutPage
+          ? 'About & Contact | Olajumoke Peculiar Signature'
+          : 'Olajumoke Peculiar Signature | Bespoke Fashion in Ile-Ife';
     const description = isCollectionPage
       ? 'Explore our curated collection of Peculiar looks, created for moments worth making a statement.'
       : isCustomizePage
-        ? 'Choose a Ready-to-Wear design from Olajumoke Peculiar Signature and request a small adjustment. Every request is reviewed on WhatsApp.'
-        : 'Olajumoke Peculiar Signature is a premium Nigerian women’s fashion atelier in Ile-Ife, creating bespoke and ready-to-wear fashion for every moment worth making a statement.';
+        ? 'Choose a Ready-to-Wear design from Olajumoke Peculiar Signature and request an adjustment. Every request is reviewed on WhatsApp.'
+        : isAboutPage
+          ? 'Meet Olajumoke Peculiar Signature, explore the collections, and get in touch through WhatsApp or social media.'
+          : 'Olajumoke Peculiar Signature is a premium Nigerian women’s fashion atelier in Ile-Ife, creating bespoke and ready-to-wear fashion for every moment worth making a statement.';
     document.title = pageTitle;
     let meta = document.querySelector('meta[name="description"]');
     if (!meta) {
@@ -888,7 +905,7 @@ function Home() {
     setOg('og:description', description);
     setOg('og:type', 'website');
     setOg('og:image', logo);
-  }, [isCollectionPage, isCustomizePage]);
+  }, [isCollectionPage, isCustomizePage, isAboutPage]);
 
   const addToCart = (look: Look, openCart = true) => {
     setCartItems((current) => {
@@ -952,7 +969,7 @@ function Home() {
 Look: ${lookName(item)}
 Product price: ${item.priceLabel ?? 'Price on request'}
 Quantity: ${item.quantity}
-Requested adjustments: ${request.adjustmentType || 'Small adjustment — see details below'}
+Requested adjustments: ${request.adjustmentType || 'Adjustment — see details below'}
 Adjustment details: ${request.requestedChanges}
 Size / measurement preference: ${request.sizePreference || 'To discuss'}
 Expected date: ${formatDate(request.expectedDate)}
@@ -1010,6 +1027,7 @@ Please confirm the order details with me. Thank you.`;
         cartCount={cartCount}
         onOpenCart={() => setCartOpen(true)}
         isCollectionPage={isEditorialSubpage}
+        isAboutPage={isAboutPage}
       />
       <Switch>
         <Route path={routeBase}>
@@ -1059,7 +1077,7 @@ Please confirm the order details with me. Thank you.`;
                 One Look. <em>Many Possibilities.</em>
               </h2>
               <p>
-                Browse our ready-to-wear collections or request a small adjustment to a Peculiar design.
+                Browse our ready-to-wear collections or request an adjustment to a Peculiar design.
               </p>
             </div>
             <div className="possibilities-grid">
@@ -1118,9 +1136,9 @@ Please confirm the order details with me. Thank you.`;
               <p className="eyebrow">Personalise a Peculiar design</p>
               <h2 id="make-it-yours-title" className="serif">Make It <em>Yours.</em></h2>
               <p>Love the look, but want to make it your own?</p>
-              <p>Tell us about a small change you'd like to make to one of our ready-to-wear pieces.</p>
+              <p>Tell us about a change you'd like to make to one of our ready-to-wear pieces.</p>
               <p className="make-it-yours-examples">
-                Small adjustments can include changing long sleeves to short sleeves, adding a bottom slit to a gown, or adding stones to a gele. We focus on thoughtful changes to existing Peculiar designs.
+                Adjustments can include changing long sleeves to short sleeves, adding a bottom slit to a gown, or adding stones to a gele. We focus on thoughtful changes to existing Peculiar designs.
               </p>
               <Link className="button-gold" href={customizeLookHref}>
                 Customize a Look <MoveUpRight size={15} />
@@ -1222,22 +1240,14 @@ Please confirm the order details with me. Thank you.`;
         <section className="about section-space" id="about" aria-labelledby="about-title">
           <div className="section-shell about-grid">
             <div className="about-image">
-              <img src={olajumokePortrait} alt="Olajumoke in a turquoise embellished outfit" loading="lazy" />
+              <img src={olajumokePortrait} alt={aboutStoryImageAlt} loading="lazy" />
             </div>
             <div className="about-copy">
-              <p className="eyebrow">The woman behind the signature</p>
+              <p className="eyebrow">{aboutStoryEyebrow}</p>
               <h2 id="about-title" className="serif">
                 Meet <em>Olajumoke.</em>
               </h2>
-              <p>
-                Behind every Peculiar look is a desire to help you stand out, feel
-                confident and make a lasting impression.
-              </p>
-              <p>
-                From carefully considered details to the final look, Olajumoke
-                Peculiar Signature brings together fashion, individuality and the
-                beauty of dressing for the moment.
-              </p>
+              {aboutStoryParagraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
               <a className="button-gold" href="#bespoke" onClick={(event) => { event.preventDefault(); scrollToSection('bespoke'); }}>
                 Discover Our Story <MoveUpRight size={15} />
               </a>
@@ -1251,7 +1261,7 @@ Please confirm the order details with me. Thank you.`;
             Have Something <em>Peculiar In Mind?</em>
           </h2>
           <p>
-            Choose an existing Peculiar design and request a small adjustment to make the look feel like your own.
+            Choose an existing Peculiar design and request an adjustment to make the look feel like your own.
           </p>
           <div className="final-actions">
             <Link className="button-ghost" href={customizeLookHref}>
@@ -1278,6 +1288,19 @@ Please confirm the order details with me. Thank you.`;
             readyToWearHref={readyToWearHref}
             onAddCustomizedToCart={addCustomizedToCart}
             onOpenCart={() => setCartOpen(true)}
+          />
+        </Route>
+        <Route path={aboutContactHref}>
+          <AboutContactPage
+            aboutImage={olajumokePortrait}
+            aboutImageAlt={aboutStoryImageAlt}
+            aboutEyebrow={aboutStoryEyebrow}
+            aboutTitle={aboutStoryTitle}
+            aboutParagraphs={aboutStoryParagraphs}
+            categories={categories}
+            categoryHref={getCategoryHref}
+            readyToWearHref={readyToWearHref}
+            whatsappNumber={whatsappNumber}
           />
         </Route>
         <Route component={NotFound} />
