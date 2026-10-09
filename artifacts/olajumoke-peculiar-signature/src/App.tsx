@@ -30,6 +30,7 @@ import limeLook from '@assets/grok_1789910590729_1789913728021.jpg';
 import asoEbi from '@assets/grok_1789910981424_1789913727983.jpg';
 import sequinDetail from '@assets/grok_1789911010662_1789913727831.jpg';
 import NotFound from '@/pages/not-found';
+import CustomizePage, { type CustomizationRequest } from '@/pages/customize-a-look';
 import ReadyToWearPage, { type ReadyToWearProduct } from '@/pages/ready-to-wear';
 
 type Look = {
@@ -44,6 +45,7 @@ type Look = {
 type CartItem = Look & {
   id: string;
   quantity: number;
+  customization?: CustomizationRequest;
 };
 
 type CartCheckoutData = {
@@ -613,9 +615,9 @@ function CartModal({
           <X size={19} />
         </button>
         <div className="cart-modal-heading">
-          <p className="eyebrow">Ready-to-wear selections</p>
+          <p className="eyebrow">Ready-to-wear selections · {items.reduce((total, item) => total + item.quantity, 0)} items</p>
           <h2 id="cart-title" className="serif">Your Cart</h2>
-          <p>Review your selected looks and share your order details with Olajumoke on WhatsApp.</p>
+          <p>Review your selected looks and share your order details with Olajumoke on WhatsApp. Prices are confirmed with you there.</p>
         </div>
 
         {items.length === 0 ? (
@@ -632,10 +634,19 @@ function CartModal({
                 <article className="cart-item" key={item.id}>
                   <img src={item.image} alt={item.alt} />
                   <div className="cart-item-copy">
-                    <span className="eyebrow">Selected look</span>
+                    <span className="eyebrow">{item.customization ? 'Customization request' : 'Ready-to-wear look'}</span>
                     <h3 className="serif">{lookName(item)}</h3>
                     <p>{item.description ?? item.alt}</p>
-                    {item.priceLabel && <p className="cart-item-price">{item.priceLabel}</p>}
+                    {item.priceLabel && <p className="cart-item-price">{item.priceLabel} · {item.quantity} {item.quantity === 1 ? 'look' : 'looks'}</p>}
+                    {item.customization && (
+                      <div className="cart-customization-details">
+                        <p><strong>Requested change:</strong> {item.customization.adjustmentType || 'Small adjustment'} — {item.customization.requestedChanges}</p>
+                        <p><strong>Size / measurements:</strong> {item.customization.sizePreference || 'To discuss'}</p>
+                        <p><strong>Expected date:</strong> {formatDate(item.customization.expectedDate)}</p>
+                        <p><strong>Customer:</strong> {item.customization.customerName} · {item.customization.whatsapp}</p>
+                        {item.customization.additionalNotes && <p><strong>Additional notes:</strong> {item.customization.additionalNotes}</p>}
+                      </div>
+                    )}
                     <div className="cart-item-controls">
                       <div className="quantity-control" aria-label={`Quantity for ${lookName(item)}`}>
                         <button type="button" aria-label="Decrease quantity" onClick={() => onQuantityChange(item.id, item.quantity - 1)}>
@@ -684,15 +695,7 @@ function CartModal({
                 )}
                 <label className="form-field">
                   <span>Size / measurement preference</span>
-                  <select required value={checkout.sizePreference} onChange={(event) => onCheckoutChange('sizePreference', event.target.value)}>
-                    <option value="">Choose a preference</option>
-                    <option>Small</option>
-                    <option>Medium</option>
-                    <option>Large</option>
-                    <option>Extra Large</option>
-                    <option>I have custom measurements</option>
-                    <option>I’d like to discuss sizing</option>
-                  </select>
+                  <input required value={checkout.sizePreference} onChange={(event) => onCheckoutChange('sizePreference', event.target.value)} placeholder="Size or measurements to discuss" />
                 </label>
               </div>
               <label className="form-field">
@@ -814,7 +817,10 @@ function Home() {
   const [location] = useLocation();
   const currentPath = location.split(/[?#]/, 1)[0].replace(/\/+$/, '') || '/';
   const collectionPath = readyToWearHref.replace(/\/+$/, '') || '/';
+  const customizePath = customizeLookHref.replace(/\/+$/, '') || '/';
   const isCollectionPage = currentPath === collectionPath;
+  const isCustomizePage = currentPath === customizePath;
+  const isEditorialSubpage = isCollectionPage || isCustomizePage;
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [selectedLook, setSelectedLook] = useState<Look | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
@@ -853,10 +859,14 @@ function Home() {
   useEffect(() => {
     const pageTitle = isCollectionPage
       ? 'Ready-to-Wear | Olajumoke Peculiar Signature'
-      : 'Olajumoke Peculiar Signature | Bespoke Fashion in Ile-Ife';
+      : isCustomizePage
+        ? 'Customize a Look | Olajumoke Peculiar Signature'
+        : 'Olajumoke Peculiar Signature | Bespoke Fashion in Ile-Ife';
     const description = isCollectionPage
       ? 'Explore our curated collection of Peculiar looks, created for moments worth making a statement.'
-      : 'Olajumoke Peculiar Signature is a premium Nigerian women’s fashion atelier in Ile-Ife, creating bespoke and ready-to-wear fashion for every moment worth making a statement.';
+      : isCustomizePage
+        ? 'Choose a Ready-to-Wear design from Olajumoke Peculiar Signature and request a small adjustment. Every request is reviewed on WhatsApp.'
+        : 'Olajumoke Peculiar Signature is a premium Nigerian women’s fashion atelier in Ile-Ife, creating bespoke and ready-to-wear fashion for every moment worth making a statement.';
     document.title = pageTitle;
     let meta = document.querySelector('meta[name="description"]');
     if (!meta) {
@@ -878,11 +888,11 @@ function Home() {
     setOg('og:description', description);
     setOg('og:type', 'website');
     setOg('og:image', logo);
-  }, [isCollectionPage]);
+  }, [isCollectionPage, isCustomizePage]);
 
   const addToCart = (look: Look, openCart = true) => {
     setCartItems((current) => {
-      const existing = current.find((item) => item.image === look.image);
+      const existing = current.find((item) => !item.customization && item.image === look.image);
       return existing
         ? current.map((item) => item.image === look.image ? { ...item, quantity: item.quantity + 1 } : item)
         : [...current, { ...look, id: look.id ?? look.image, quantity: 1 }];
@@ -890,6 +900,26 @@ function Home() {
     setSelectedLook(null);
     setCheckoutError('');
     if (openCart) setCartOpen(true);
+  };
+
+  const addCustomizedToCart = (product: ReadyToWearProduct, customization: CustomizationRequest) => {
+    setCartItems((current) => [
+      ...current,
+      {
+        ...product,
+        id: `custom-${product.id}-${crypto.randomUUID()}`,
+        quantity: customization.quantity,
+        customization,
+      },
+    ]);
+    setCheckout((current) => ({
+      ...current,
+      name: customization.customerName,
+      whatsapp: customization.whatsapp,
+      expectedDate: customization.expectedDate || current.expectedDate,
+      sizePreference: customization.sizePreference || current.sizePreference,
+    }));
+    setCheckoutError('');
   };
 
   const updateQuantity = (id: string, quantity: number) => {
@@ -915,8 +945,27 @@ function Home() {
       return;
     }
     const selectedLooks = cartItems
-      .map((item, index) => `LOOK ${index + 1}: ${lookName(item)}
-Quantity: ${item.quantity}`)
+      .map((item, index) => {
+        if (item.customization) {
+          const request = item.customization;
+          return `CUSTOMIZATION REQUEST ${index + 1}
+Look: ${lookName(item)}
+Product price: ${item.priceLabel ?? 'Price on request'}
+Quantity: ${item.quantity}
+Requested adjustments: ${request.adjustmentType || 'Small adjustment — see details below'}
+Adjustment details: ${request.requestedChanges}
+Size / measurement preference: ${request.sizePreference || 'To discuss'}
+Expected date: ${formatDate(request.expectedDate)}
+Customer name: ${request.customerName}
+WhatsApp number: ${request.whatsapp}
+Pickup or delivery preference: ${checkout.fulfillment}
+${checkout.fulfillment === 'Delivery' ? `Delivery address: ${checkout.address}` : ''}
+Additional notes: ${request.additionalNotes || 'None'}`;
+        }
+        return `READY-TO-WEAR LOOK ${index + 1}: ${lookName(item)}
+Product price: ${item.priceLabel ?? 'Price on request'}
+Quantity: ${item.quantity}`;
+      })
       .join('\n');
     const message = `Hello Olajumoke, I’d like to place a ready-to-wear order request.
 
@@ -956,11 +1005,11 @@ Please confirm the order details with me. Thank you.`;
     );
 
   return (
-    <div className={`atelier-page${isCollectionPage ? ' atelier-page-collection' : ''}`}>
+    <div className={`atelier-page${isEditorialSubpage ? ' atelier-page-collection' : ''}`}>
       <Nav
         cartCount={cartCount}
         onOpenCart={() => setCartOpen(true)}
-        isCollectionPage={isCollectionPage}
+        isCollectionPage={isEditorialSubpage}
       />
       <Switch>
         <Route path={routeBase}>
@@ -1221,6 +1270,14 @@ Please confirm the order details with me. Thank you.`;
             onAddToCart={(product) => addToCart(product, false)}
             onOpenCart={() => setCartOpen(true)}
             cartCount={cartCount}
+          />
+        </Route>
+        <Route path={customizeLookHref}>
+          <CustomizePage
+            products={readyToWearProducts}
+            readyToWearHref={readyToWearHref}
+            onAddCustomizedToCart={addCustomizedToCart}
+            onOpenCart={() => setCartOpen(true)}
           />
         </Route>
         <Route component={NotFound} />

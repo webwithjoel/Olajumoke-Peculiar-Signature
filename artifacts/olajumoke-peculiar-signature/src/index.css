@@ -349,6 +349,9 @@ button { font: inherit; }
 .cart-item-copy .eyebrow { font-size: .56rem; }
 .cart-item-copy h3 { margin: 7px 0; font-size: 1.65rem; font-weight: 500; line-height: .95; }
 .cart-item-copy > p { margin: 0 0 12px; color: hsl(var(--muted-foreground)); font-size: .7rem; line-height: 1.5; }
+.cart-customization-details { display: grid; gap: 6px; margin: 0 0 13px; padding: 11px; background: hsl(35 44% 97%); }
+.cart-customization-details p { margin: 0; color: hsl(var(--muted-foreground)); font-size: .66rem; line-height: 1.55; overflow-wrap: anywhere; }
+.cart-customization-details strong { color: hsl(var(--foreground)); }
 .cart-item-controls { display: flex; align-items: center; gap: 16px; margin-top: auto; }
 .quantity-control { display: inline-flex; align-items: center; gap: 10px; min-height: 34px; border: 1px solid hsl(var(--border)); }
 .quantity-control button { display: grid; place-items: center; width: 34px; height: 32px; border: 0; background: transparent; color: hsl(var(--foreground)); cursor: pointer; }
