@@ -9,6 +9,8 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { ProductList } from '@/components/admin/product-list';
+import { ProductForm } from '@/components/admin/product-form';
+import type { AdminProduct } from '@/hooks/use-admin-products';
 import { supabase } from '@/lib/supabase';
 
 type AdminAccess = 'checking' | 'allowed' | 'denied' | 'failed';
@@ -35,6 +37,8 @@ export default function AdminPage() {
   const [password, setPassword] = useState('');
   const [signingIn, setSigningIn] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [productEditorOpen, setProductEditorOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<AdminProduct | null>(null);
   const checkSequence = useRef(0);
 
   const checkAdmin = useCallback(async (nextSession: Session | null) => {
@@ -195,7 +199,17 @@ export default function AdminPage() {
             <p className="mt-2 text-sm text-muted-foreground">This account is not permitted to manage products.</p>
           </section>
         ) : (
-          <ProductList onAddProduct={() => toast({ title: 'Product editor', description: 'Product creation is being prepared.' })} />
+          <>
+            <ProductList
+              onAddProduct={() => { setEditingProduct(null); setProductEditorOpen(true); }}
+              onEditProduct={(product) => { setEditingProduct(product); setProductEditorOpen(true); }}
+            />
+            <ProductForm
+              open={productEditorOpen}
+              product={editingProduct}
+              onClose={() => setProductEditorOpen(false)}
+            />
+          </>
         )}
       </div>
     </main>

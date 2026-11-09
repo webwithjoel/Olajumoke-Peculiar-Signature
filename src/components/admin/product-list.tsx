@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { AlertTriangle, ImageOff, Plus, Search } from 'lucide-react';
+import { AlertTriangle, ImageOff, Pencil, Plus, Search } from 'lucide-react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -13,12 +13,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useAdminCategories, useAdminProducts } from '@/hooks/use-admin-products';
+import { useAdminCategories, useAdminProducts, type AdminProduct } from '@/hooks/use-admin-products';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 
 type ProductListProps = {
   onAddProduct: () => void;
+  onEditProduct: (product: AdminProduct) => void;
 };
 
 function ProductThumbnail({ path, title }: { path: string | null; title: string }) {
@@ -33,7 +34,7 @@ function ProductThumbnail({ path, title }: { path: string | null; title: string 
   return <img className="size-16 shrink-0 rounded border border-border object-cover" src={imageUrl} alt={title} />;
 }
 
-export function ProductList({ onAddProduct }: ProductListProps) {
+export function ProductList({ onAddProduct, onEditProduct }: ProductListProps) {
   const { data = [], isLoading, isError, refetch } = useAdminProducts();
   const { data: categories = [] } = useAdminCategories();
   const { toast } = useToast();
@@ -145,6 +146,9 @@ export function ProductList({ onAddProduct }: ProductListProps) {
                       {!product.is_published && <Badge variant="destructive">Draft</Badge>}
                     </div>
                   </div>
+                  <Button type="button" size="icon" variant="outline" className="shrink-0" aria-label={`Edit ${product.title}`} onClick={() => onEditProduct(product)}>
+                    <Pencil aria-hidden="true" />
+                  </Button>
                 </div>
               </li>
             ))}
@@ -173,6 +177,9 @@ export function ProductList({ onAddProduct }: ProductListProps) {
                             {product.is_customizable && <Badge variant="outline">Customizable</Badge>}
                           </div>
                         </div>
+                        <Button type="button" size="icon" variant="outline" className="ml-auto shrink-0" aria-label={`Edit ${product.title}`} onClick={() => onEditProduct(product)}>
+                          <Pencil aria-hidden="true" />
+                        </Button>
                       </div>
                     </td>
                     <td className="px-4 py-3">{product.category?.label ?? 'Uncategorized'}</td>
