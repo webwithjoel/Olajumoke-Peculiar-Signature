@@ -1,10 +1,21 @@
 import { useEffect, useRef, useState } from 'react';
-import { AlertTriangle, ImageOff, Pencil, Plus, Search } from 'lucide-react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { AlertTriangle, ImageOff, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -13,6 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
 import { useAdminCategories, useAdminProducts, type AdminProduct } from '@/hooks/use-admin-products';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
@@ -21,6 +33,35 @@ type ProductListProps = {
   onAddProduct: () => void;
   onEditProduct: (product: AdminProduct) => void;
 };
+
+type ProductActionsProps = {
+  product: AdminProduct;
+  disabled: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+  onToggle: (field: 'is_featured' | 'is_published', value: boolean) => void;
+};
+
+function ProductActions({ product, disabled, onEdit, onDelete, onToggle }: ProductActionsProps) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+      <div className="flex items-center gap-2">
+        <Label className="text-xs" htmlFor={`featured-${product.id}`}>Featured</Label>
+        <Switch id={`featured-${product.id}`} checked={product.is_featured} onCheckedChange={(checked) => onToggle('is_featured', checked)} disabled={disabled} aria-label={`Feature ${product.title} on homepage`} />
+      </div>
+      <div className="flex items-center gap-2">
+        <Label className="text-xs" htmlFor={`published-${product.id}`}>Published</Label>
+        <Switch id={`published-${product.id}`} checked={product.is_published} onCheckedChange={(checked) => onToggle('is_published', checked)} disabled={disabled} aria-label={`Publish ${product.title}`} />
+      </div>
+      <Button type="button" size="icon" variant="outline" aria-label={`Edit ${product.title}`} onClick={onEdit} disabled={disabled}>
+        <Pencil aria-hidden="true" />
+      </Button>
+      <Button type="button" size="icon" variant="outline" aria-label={`Delete ${product.title}`} onClick={onDelete} disabled={disabled}>
+        <Trash2 aria-hidden="true" />
+      </Button>
+    </div>
+  );
+}
 
 function ProductThumbnail({ path, title }: { path: string | null; title: string }) {
   if (!path) {
@@ -35,13 +76,76 @@ function ProductThumbnail({ path, title }: { path: string | null; title: string 
 }
 
 export function ProductList({ onAddProduct, onEditProduct }: ProductListProps) {
+  const queryClient = useQueryClient();
   const { data = [], isLoading, isError, refetch } = useAdminProducts();
   const { data: categories = [] } = useAdminCategories();
   const { toast } = useToast();
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [deleteCandidate, setDeleteCandidate] = useState<AdminProduct | null>(null);
   const notifiedError = useRef(false);
+
+  const invalidateProducts = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['admin', 'products'] }),
+      queryClient.invalidateQueries({ queryKey: ['products'] }),
+    ]);
+  };
+
+  const toggleMutation = useMutation({
+    mutationFn: async ({ productId, field, value }: { productId: string; field: 'is_featured' | 'is_published'; value: boolean }) => {
+      const { error } = await supabase.from('products').update({ [field]: value }).eq('id', productId);
+      if (error) throw error;
+    },
+    onSuccess: async (_data, variables) => {
+      await invalidateProducts();
+      toast({ title: variables.field === 'is_featured' ? 'Featured setting updated' : 'Publication setting updated' });
+    },
+    onError: async (error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      if (/jwt expired|invalid jwt|session.*expired/i.test(message)) {
+        await supabase.auth.signOut();
+        toast({ title: 'Session expired', description: 'Please sign in again to continue.', variant: 'destructive' });
+      } else {
+        toast({ title: 'Product setting could not be updated', description: message, variant: 'destructive' });
+      }
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (product: AdminProduct) => {
+      const { error } = await supabase.from('products').delete().eq('id', product.id);
+      if (error) throw error;
+      if (product.image_path) {
+        const { error: storageError } = await supabase.storage.from('product-images').remove([product.image_path]);
+        return { storageError: storageError?.message ?? null };
+      }
+      return { storageError: null };
+    },
+    onSuccess: async (result, product) => {
+      await invalidateProducts();
+      setDeleteCandidate(null);
+      if (result.storageError) {
+        toast({
+          title: 'Product deleted, but image cleanup failed',
+          description: `${product.title} is removed. Its storage image could not be deleted: ${result.storageError}`,
+          variant: 'destructive',
+        });
+      } else {
+        toast({ title: 'Product deleted', description: `${product.title} has been removed.` });
+      }
+    },
+    onError: async (error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      if (/jwt expired|invalid jwt|session.*expired/i.test(message)) {
+        await supabase.auth.signOut();
+        toast({ title: 'Session expired', description: 'Please sign in again to continue.', variant: 'destructive' });
+      } else {
+        toast({ title: 'Product could not be deleted', description: message, variant: 'destructive' });
+      }
+    },
+  });
 
   useEffect(() => {
     if (isError && !notifiedError.current) {
@@ -146,9 +250,15 @@ export function ProductList({ onAddProduct, onEditProduct }: ProductListProps) {
                       {!product.is_published && <Badge variant="destructive">Draft</Badge>}
                     </div>
                   </div>
-                  <Button type="button" size="icon" variant="outline" className="shrink-0" aria-label={`Edit ${product.title}`} onClick={() => onEditProduct(product)}>
-                    <Pencil aria-hidden="true" />
-                  </Button>
+                </div>
+                <div className="mt-4 border-t border-border pt-3">
+                  <ProductActions
+                    product={product}
+                    disabled={toggleMutation.isPending || deleteMutation.isPending}
+                    onEdit={() => onEditProduct(product)}
+                    onDelete={() => setDeleteCandidate(product)}
+                    onToggle={(field, value) => toggleMutation.mutate({ productId: product.id, field, value })}
+                  />
                 </div>
               </li>
             ))}
@@ -177,15 +287,21 @@ export function ProductList({ onAddProduct, onEditProduct }: ProductListProps) {
                             {product.is_customizable && <Badge variant="outline">Customizable</Badge>}
                           </div>
                         </div>
-                        <Button type="button" size="icon" variant="outline" className="ml-auto shrink-0" aria-label={`Edit ${product.title}`} onClick={() => onEditProduct(product)}>
-                          <Pencil aria-hidden="true" />
-                        </Button>
                       </div>
                     </td>
                     <td className="px-4 py-3">{product.category?.label ?? 'Uncategorized'}</td>
                     <td className="px-4 py-3">{product.price_label ?? 'Price on request'}</td>
                     <td className="px-4 py-3">
-                      {product.is_published ? <Badge>Published</Badge> : <Badge variant="destructive">Draft</Badge>}
+                      <div className="flex items-center gap-2">
+                        {product.is_published ? <Badge>Published</Badge> : <Badge variant="destructive">Draft</Badge>}
+                        <ProductActions
+                          product={product}
+                          disabled={toggleMutation.isPending || deleteMutation.isPending}
+                          onEdit={() => onEditProduct(product)}
+                          onDelete={() => setDeleteCandidate(product)}
+                          onToggle={(field, value) => toggleMutation.mutate({ productId: product.id, field, value })}
+                        />
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -194,6 +310,33 @@ export function ProductList({ onAddProduct, onEditProduct }: ProductListProps) {
           </div>
         </>
       )}
+
+      <AlertDialog
+        open={Boolean(deleteCandidate)}
+        onOpenChange={(open) => {
+          if (!open && !deleteMutation.isPending) setDeleteCandidate(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="serif text-2xl">Delete this product?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteCandidate && <>This will permanently delete <strong>{deleteCandidate.title}</strong> and its stored photo.</>}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>Cancel</AlertDialogCancel>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={!deleteCandidate || deleteMutation.isPending}
+              onClick={() => { if (deleteCandidate) deleteMutation.mutate(deleteCandidate); }}
+            >
+              {deleteMutation.isPending ? 'Deleting…' : 'Delete product'}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </section>
   );
 }

@@ -46,7 +46,7 @@ export default function AdminPage() {
     setSession(nextSession);
     setAccessError('');
     if (!nextSession) {
-      setAccess('checking');
+      setAccess('denied');
       return;
     }
 
