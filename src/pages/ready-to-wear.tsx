@@ -3,6 +3,7 @@ import { ArrowUpRight, Check, Image as ImageIcon, ShoppingBag, X } from 'lucide-
 
 import { productImageFallback } from '@/lib/product-image';
 import type { Category } from '@/hooks/use-categories';
+import { Skeleton } from '@/components/ui/skeleton';
 import './ready-to-wear.css';
 
 export type ReadyToWearProduct = {
@@ -20,6 +21,8 @@ export type ReadyToWearProduct = {
 type ReadyToWearPageProps = {
   categories: Category[];
   products: ReadyToWearProduct[];
+  isLoading: boolean;
+  hasError: boolean;
   onAddToCart: (product: ReadyToWearProduct) => void;
   onOpenCart: () => void;
   cartCount: number;
@@ -142,6 +145,8 @@ function ProductModal({
 export default function ReadyToWearPage({
   categories: categoryData,
   products,
+  isLoading,
+  hasError,
   onAddToCart,
   onOpenCart,
   cartCount,
@@ -250,7 +255,7 @@ export default function ReadyToWearPage({
         </div>
       </section>
 
-      {categories.length > 0 && (
+      {!isLoading && !hasError && categories.length > 0 && (
         <nav className="rtw-category-bar" aria-label="Ready-to-Wear categories">
           <div className="rtw-shell rtw-category-track" ref={tabTrackRef} role="tablist" aria-label="Choose a collection category">
             {categories.map((category, index) => (
@@ -290,8 +295,24 @@ export default function ReadyToWearPage({
         </nav>
       )}
 
-      <div className="rtw-shell rtw-collection" aria-live="off">
-        {categories.length === 0 ? (
+      <div className="rtw-shell rtw-collection" aria-live="off" aria-busy={isLoading}>
+        {isLoading ? (
+          <div className="rtw-products rtw-loading-products" aria-hidden="true">
+            {Array.from({ length: 3 }, (_, index) => (
+              <article className="rtw-product rtw-loading-product" key={index}>
+                <Skeleton className="rtw-loading-image" />
+                <Skeleton className="rtw-loading-line" />
+                <Skeleton className="rtw-loading-line rtw-loading-line-short" />
+              </article>
+            ))}
+          </div>
+        ) : hasError ? (
+          <section className="rtw-empty" role="alert">
+            <span className="rtw-empty-mark" />
+            <h2>Collections are taking a moment.</h2>
+            <p>Some looks could not be loaded right now. Please try again shortly.</p>
+          </section>
+        ) : categories.length === 0 ? (
           <section className="rtw-empty" data-testid="empty-ready-to-wear">
             <span className="rtw-empty-mark" />
             <h2>The collection is taking shape.</h2>
@@ -316,7 +337,13 @@ export default function ReadyToWearPage({
                 <p>Considered pieces for your most meaningful occasions.</p>
               </header>
               <div className="rtw-products">
-                {category.products.map((product, productIndex) => (
+                {category.products.length === 0 ? (
+                  <section className="rtw-empty rtw-category-empty">
+                    <span className="rtw-empty-mark" />
+                    <h2>New looks arriving soon</h2>
+                    <p>Ready-to-Wear looks will appear here when they are available to browse.</p>
+                  </section>
+                ) : category.products.map((product, productIndex) => (
                   <article
                     className={`rtw-product${category.products.length === 1 ? ' rtw-product-single' : ''}`}
                     key={product.id}

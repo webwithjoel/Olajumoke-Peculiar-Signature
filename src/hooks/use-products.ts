@@ -15,6 +15,9 @@ type ProductRow = {
   category: {
     slug: string;
     label: string;
+  } | {
+    slug: string;
+    label: string;
   }[] | null;
 };
 
@@ -34,7 +37,7 @@ async function fetchProducts(): Promise<Product[]> {
   if (error) throw error;
 
   return (data as ProductRow[]).flatMap((row) => {
-    const category = row.category?.[0];
+    const category = Array.isArray(row.category) ? row.category[0] : row.category;
     if (!category) return [];
 
     return [{
@@ -43,7 +46,7 @@ async function fetchProducts(): Promise<Product[]> {
       category: category.slug,
       categoryLabel: category.label,
       title: row.title,
-      image: row.image_path
+      image: row.image_path !== null
         ? supabase.storage.from('product-images').getPublicUrl(row.image_path).data.publicUrl
         : null,
       alt: row.alt ?? row.title,

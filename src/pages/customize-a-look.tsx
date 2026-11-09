@@ -5,6 +5,7 @@ import { Link } from 'wouter';
 import { productImageFallback } from '@/lib/product-image';
 import type { Category } from '@/hooks/use-categories';
 import type { ReadyToWearProduct } from './ready-to-wear';
+import { Skeleton } from '@/components/ui/skeleton';
 import './customize-a-look.css';
 
 export type CustomizationRequest = {
@@ -21,6 +22,8 @@ export type CustomizationRequest = {
 type CustomizePageProps = {
   categories: Category[];
   products: ReadyToWearProduct[];
+  isLoading: boolean;
+  hasError: boolean;
   readyToWearHref: string;
   onAddCustomizedToCart: (product: ReadyToWearProduct, request: CustomizationRequest) => void;
   onOpenCart: () => void;
@@ -213,7 +216,7 @@ function RequestForm({
   );
 }
 
-export default function CustomizePage({ categories: categoryData, products, readyToWearHref, onAddCustomizedToCart, onOpenCart }: CustomizePageProps) {
+export default function CustomizePage({ categories: categoryData, products, isLoading, hasError, readyToWearHref, onAddCustomizedToCart, onOpenCart }: CustomizePageProps) {
   const categories = useMemo(() => {
     return categoryData.flatMap((category) => {
       const categoryProducts = products.filter((product) => product.category === category.slug);
@@ -319,6 +322,21 @@ export default function CustomizePage({ categories: categoryData, products, read
             <p>Start with one of our existing designs, then tell us what you'd like changed.</p>
           </div>
 
+          {isLoading ? (
+            <div className="customize-loading-card" aria-hidden="true">
+              <Skeleton className="customize-loading-image" />
+              <div className="customize-loading-details">
+                <Skeleton className="customize-loading-line" />
+                <Skeleton className="customize-loading-line customize-loading-line-short" />
+                <Skeleton className="customize-loading-line" />
+              </div>
+            </div>
+          ) : hasError ? (
+            <p className="customize-data-message" role="alert">Some looks could not be loaded right now. Please try again shortly.</p>
+          ) : categories.length === 0 ? (
+            <p className="customize-data-message">There are no looks available to customize just yet. Please check back soon.</p>
+          ) : (
+          <>
           <div className={`customize-category-bar${selectedProduct ? ' has-selected-look' : ''}`}>
             <div className="customize-category-tabs" role="tablist" aria-label="Ready-to-Wear categories">
               {categories.map((category) => (
@@ -365,6 +383,8 @@ export default function CustomizePage({ categories: categoryData, products, read
               onOpenCart={onOpenCart}
               onChooseAnother={chooseAnother}
             />
+          )}
+          </>
           )}
         </div>
       </section>

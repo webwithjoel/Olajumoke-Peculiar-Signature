@@ -36,6 +36,7 @@ import AboutContactPage from '@/pages/about-contact';
 import { productImageFallback } from '@/lib/product-image';
 import { useCategories } from '@/hooks/use-categories';
 import { useProducts } from '@/hooks/use-products';
+import { Skeleton } from '@/components/ui/skeleton';
 
 type Look = {
   image: string | null;
@@ -775,8 +776,10 @@ function Lightbox({
 }
 
 function Home() {
-  const { data: categoryData = [] } = useCategories();
-  const { data: productData = [] } = useProducts();
+  const categoryQuery = useCategories();
+  const productQuery = useProducts();
+  const categoryData = categoryQuery.data ?? [];
+  const productData = productQuery.data ?? [];
   const featuredProducts = productData.filter((product) => product.isFeatured).slice(0, 5);
   const customizableProducts = productData.filter((product) => product.isCustomizable);
   const categories = categoryData.flatMap((category) => {
@@ -1071,15 +1074,40 @@ Please confirm the order details with me. Thank you.`;
               </div>
               <p>Explore pieces created for the moments that matter.</p>
             </div>
-            <div className="category-grid">
-              {categories.map((category) => (
+            <div className="category-grid" aria-busy={categoryQuery.isLoading}>
+              {categoryQuery.isError ? (
+                <p className="data-error" role="alert">Some collections could not be loaded right now. Please try again shortly.</p>
+              ) : categoryQuery.isLoading ? (
+                Array.from({ length: 5 }, (_, index) => (
+                  <Skeleton className="category-card category-loading-skeleton" key={index} aria-hidden="true" />
+                ))
+              ) : categories.map((category) => (
                 <CategoryCard key={category.slug} {...category} />
               ))}
             </div>
           </div>
         </section>
 
-        {featuredProducts.length > 0 && (
+        {productQuery.isLoading ? (
+          <section className="looks-band" aria-labelledby="featured-title" aria-busy="true">
+            <div className="section-shell">
+              <div className="band-heading">
+                <div>
+                  <p className="eyebrow">Made for the moment</p>
+                  <h2 id="featured-title" className="serif">
+                    Featured <em>Looks.</em>
+                  </h2>
+                </div>
+                <p>A selection of Peculiar looks to inspire your next statement.</p>
+              </div>
+              <div className="featured-grid">
+                {Array.from({ length: 5 }, (_, index) => (
+                  <Skeleton className="look-card featured-loading-card" key={index} aria-hidden="true" />
+                ))}
+              </div>
+            </div>
+          </section>
+        ) : featuredProducts.length > 0 && (
           <section className="looks-band" id="collections" aria-labelledby="featured-title">
             <div className="section-shell">
               <div className="band-heading">
@@ -1102,6 +1130,11 @@ Please confirm the order details with me. Thank you.`;
               </div>
             </div>
           </section>
+        )}
+        {productQuery.isError && (
+          <p className="data-error product-data-error" role="alert">
+            Some looks could not be loaded right now. Please try again shortly.
+          </p>
         )}
 
         <section className="make-it-yours section-space" aria-labelledby="make-it-yours-title">
@@ -1252,6 +1285,8 @@ Please confirm the order details with me. Thank you.`;
           <ReadyToWearPage
             categories={categoryData}
             products={productData}
+            isLoading={categoryQuery.isLoading || productQuery.isLoading}
+            hasError={categoryQuery.isError || productQuery.isError}
             onAddToCart={(product) => addToCart(product, false)}
             onOpenCart={() => setCartOpen(true)}
             cartCount={cartCount}
@@ -1261,6 +1296,8 @@ Please confirm the order details with me. Thank you.`;
           <CustomizePage
             categories={categoryData}
             products={customizableProducts}
+            isLoading={categoryQuery.isLoading || productQuery.isLoading}
+            hasError={categoryQuery.isError || productQuery.isError}
             readyToWearHref={readyToWearHref}
             onAddCustomizedToCart={addCustomizedToCart}
             onOpenCart={() => setCartOpen(true)}
@@ -1274,6 +1311,8 @@ Please confirm the order details with me. Thank you.`;
             aboutTitle={aboutStoryTitle}
             aboutParagraphs={aboutStoryParagraphs}
             categories={categories}
+            categoriesLoading={categoryQuery.isLoading}
+            categoriesError={categoryQuery.isError}
             categoryHref={getCategoryHref}
             readyToWearHref={readyToWearHref}
             whatsappNumber={whatsappNumber}

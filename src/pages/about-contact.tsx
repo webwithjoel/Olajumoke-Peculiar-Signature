@@ -3,6 +3,7 @@ import { ArrowRight, ArrowUpRight, MessageCircle, Send } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { Link } from 'wouter';
 
+import { Skeleton } from '@/components/ui/skeleton';
 import './about-contact.css';
 
 type Category = {
@@ -26,6 +27,8 @@ type AboutContactProps = {
   aboutTitle: string;
   aboutParagraphs: string[];
   categories: Category[];
+  categoriesLoading: boolean;
+  categoriesError: boolean;
   categoryHref: (slug: string) => string;
   readyToWearHref: string;
   whatsappNumber: string;
@@ -45,6 +48,8 @@ export default function AboutContactPage({
   aboutTitle,
   aboutParagraphs,
   categories,
+  categoriesLoading,
+  categoriesError,
   categoryHref,
   readyToWearHref,
   whatsappNumber,
@@ -123,7 +128,13 @@ export default function AboutContactPage({
             </p>
           </div>
           <div className="ac-category-grid">
-            {categories.map((category, index) => (
+            {categoriesError ? (
+              <p className="ac-category-error" role="alert">Some collections could not be loaded right now. Please try again shortly.</p>
+            ) : categoriesLoading ? (
+              Array.from({ length: 5 }, (_, index) => (
+                <Skeleton className="ac-category-card ac-category-loading" key={index} aria-hidden="true" />
+              ))
+            ) : categories.map((category, index) => (
               <Link
                 className="ac-category-card"
                 href={categoryHref(category.slug)}

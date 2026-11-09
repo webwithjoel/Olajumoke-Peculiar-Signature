@@ -143,6 +143,9 @@
 
 .about-contact-page .ac-category-card:nth-child(4),
 .about-contact-page .ac-category-card:nth-child(5) { grid-column: span 3; }
+.about-contact-page .ac-category-loading { border-radius: 0; background: hsl(346 25% 87%); }
+.about-contact-page .ac-category-loading::after { display: none; }
+.about-contact-page .ac-category-error { grid-column: 1 / -1; margin: 0; padding: 28px 12px; color: hsl(var(--muted-foreground)); text-align: center; }
 
 .about-contact-page .ac-category-card::after {
   position: absolute;

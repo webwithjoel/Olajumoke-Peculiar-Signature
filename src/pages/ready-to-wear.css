@@ -286,6 +286,11 @@
 .rtw-empty-mark { width: 45px; height: 1px; margin: 0 auto 20px; background: var(--rtw-gold); }
 .rtw-empty h2 { margin: 0 0 9px; font-family: var(--app-font-serif); font-size: 2.2rem; font-weight: 500; }
 .rtw-empty p { max-width: 380px; margin: 0; color: var(--rtw-muted); font-size: .83rem; line-height: 1.65; }
+.rtw-category-empty { grid-column: 1 / -1; }
+.rtw-loading-product { pointer-events: none; }
+.rtw-loading-image { display: block; width: 100%; aspect-ratio: 4 / 5; border-radius: 0; background: hsl(346 25% 87%); }
+.rtw-loading-line { display: block; width: 76%; height: 15px; margin-top: 18px; border-radius: 0; background: hsl(346 25% 87%); }
+.rtw-loading-line-short { width: 48%; height: 12px; margin-top: 10px; }
 
 .rtw-toast {
   position: fixed;
