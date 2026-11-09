@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, type FormEvent, useEffect, useRef, useState } from 'react';
 import {
   ArrowLeft,
   ArrowRight,
@@ -37,6 +37,8 @@ import { productImageFallback } from '@/lib/product-image';
 import { useCategories } from '@/hooks/use-categories';
 import { useProducts } from '@/hooks/use-products';
 import { Skeleton } from '@/components/ui/skeleton';
+
+const AdminPage = lazy(() => import('@/pages/admin'));
 
 type Look = {
   image: string | null;
@@ -1368,4 +1370,19 @@ Please confirm the order details with me. Thank you.`;
   );
 }
 
-export default Home;
+function App() {
+  return (
+    <Switch>
+      <Route path="/admin">
+        <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Loading admin…</div>}>
+          <AdminPage />
+        </Suspense>
+      </Route>
+      <Route>
+        <Home />
+      </Route>
+    </Switch>
+  );
+}
+
+export default App;

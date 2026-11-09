@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import App from './App';
 import { ErrorBoundary } from '@/components/error-boundary';
+import { Toaster } from '@/components/ui/toaster';
 
 import './index.css';
 
@@ -17,6 +18,7 @@ createRoot(document.getElementById('root')!, {
   <QueryClientProvider client={queryClient}>
     <ErrorBoundary>
       <App />
+      <Toaster />
     </ErrorBoundary>
   </QueryClientProvider>,
 );
