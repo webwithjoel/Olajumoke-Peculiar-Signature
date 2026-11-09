@@ -35,6 +35,7 @@ import ReadyToWearPage, { type ReadyToWearProduct } from '@/pages/ready-to-wear'
 import AboutContactPage from '@/pages/about-contact';
 import { productImageFallback } from '@/lib/product-image';
 import { useCategories } from '@/hooks/use-categories';
+import { useProducts } from '@/hooks/use-products';
 
 type Look = {
   image: string | null;
@@ -217,64 +218,6 @@ const categoryImageAlts: Record<string, string> = {
   'corporate-formal': 'Woman in a purple structured dress',
   'headpieces-fascinators': 'Woman in a turquoise look with a sculptural headpiece',
 };
-
-const readyToWearProducts: ReadyToWearProduct[] = [
-  {
-    id: 'bridal-lavender-party',
-    slug: 'bridal',
-    category: 'bridal',
-    categoryLabel: 'Bridal',
-    title: 'Lavender Bridal Party Look',
-    image: bridalGroup,
-    alt: 'Bridal party in coordinated lavender looks',
-    description: 'For the bride and every beautiful moment around her.',
-    priceLabel: 'Price on request',
-  },
-  {
-    id: 'owambe-purple-traditional',
-    slug: 'owambe-traditional',
-    category: 'owambe-traditional',
-    categoryLabel: 'Owambe & Traditional',
-    title: 'Purple Traditional Look',
-    image: purpleTraditional,
-    alt: 'Woman in a richly embroidered purple traditional outfit',
-    description: 'Traditional styles for celebrations and special moments.',
-    priceLabel: 'Price on request',
-  },
-  {
-    id: 'dinner-lime-celebration',
-    slug: 'dinner-special-occasions',
-    category: 'dinner-special-occasions',
-    categoryLabel: 'Dinner & Special Occasions',
-    title: 'Lime Celebration Look',
-    image: limeLook,
-    alt: 'Woman in a lime green lace evening gown with a matching gele',
-    description: 'Considered looks for evenings and occasions worth remembering.',
-    priceLabel: 'Price on request',
-  },
-  {
-    id: 'corporate-purple-structured',
-    slug: 'corporate-formal',
-    category: 'corporate-formal',
-    categoryLabel: 'Corporate & Formal',
-    title: 'Purple Structured Look',
-    image: purplePortrait,
-    alt: 'Woman in a purple structured dress',
-    description: 'Elegant fashion for work, formal occasions and everything in between.',
-    priceLabel: 'Price on request',
-  },
-  {
-    id: 'headpieces-aqua-peplum',
-    slug: 'headpieces-fascinators',
-    category: 'headpieces-fascinators',
-    categoryLabel: 'Headpieces & Fascinators',
-    title: 'Aqua Peplum Look',
-    image: aquaLook,
-    alt: 'Woman in a turquoise look with a sculptural headpiece',
-    description: 'Fascinators, hatinators and statement headpieces to complete the look.',
-    priceLabel: 'Price on request',
-  },
-];
 
 function scrollToSection(id: string, closeMenu?: () => void) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
@@ -820,6 +763,9 @@ function Lightbox({
 
 function Home() {
   const { data: categoryData = [] } = useCategories();
+  const { data: productData = [] } = useProducts();
+  const featuredProducts = productData.filter((product) => product.isFeatured).slice(0, 5);
+  const customizableProducts = productData.filter((product) => product.isCustomizable);
   const categories = categoryData.flatMap((category) => {
     const slug = categoryIdToSlug[category.slug];
     const image = categoryImages[slug];
@@ -1114,28 +1060,30 @@ Please confirm the order details with me. Thank you.`;
           </div>
         </section>
 
-        <section className="looks-band" id="collections" aria-labelledby="featured-title">
-          <div className="section-shell">
-            <div className="band-heading">
-              <div>
-                <p className="eyebrow">Made for the moment</p>
-                <h2 id="featured-title" className="serif">
-                  Featured <em>Looks.</em>
-                </h2>
+        {featuredProducts.length > 0 && (
+          <section className="looks-band" id="collections" aria-labelledby="featured-title">
+            <div className="section-shell">
+              <div className="band-heading">
+                <div>
+                  <p className="eyebrow">Made for the moment</p>
+                  <h2 id="featured-title" className="serif">
+                    Featured <em>Looks.</em>
+                  </h2>
+                </div>
+                <p>A selection of Peculiar looks to inspire your next statement.</p>
               </div>
-              <p>A selection of Peculiar looks to inspire your next statement.</p>
+              <div className="featured-grid">
+                {featuredProducts.map((product) => (
+                  <LookCard
+                    key={product.id}
+                    look={product}
+                    onSelect={() => setSelectedLook(product)}
+                  />
+                ))}
+              </div>
             </div>
-            <div className="featured-grid">
-              {looks.slice(0, 5).map((look) => (
-                <LookCard
-                  key={look.image}
-                  look={look}
-                  onSelect={() => setSelectedLook(look)}
-                />
-              ))}
-            </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         <section className="make-it-yours section-space" aria-labelledby="make-it-yours-title">
           <div className="section-shell make-it-yours-grid">
@@ -1284,7 +1232,7 @@ Please confirm the order details with me. Thank you.`;
         <Route path={readyToWearHref}>
           <ReadyToWearPage
             categories={categoryData}
-            products={readyToWearProducts}
+            products={productData}
             onAddToCart={(product) => addToCart(product, false)}
             onOpenCart={() => setCartOpen(true)}
             cartCount={cartCount}
@@ -1293,7 +1241,7 @@ Please confirm the order details with me. Thank you.`;
         <Route path={customizeLookHref}>
           <CustomizePage
             categories={categoryData}
-            products={readyToWearProducts}
+            products={customizableProducts}
             readyToWearHref={readyToWearHref}
             onAddCustomizedToCart={addCustomizedToCart}
             onOpenCart={() => setCartOpen(true)}
