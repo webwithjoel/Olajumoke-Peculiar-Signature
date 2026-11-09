@@ -115,7 +115,7 @@ export function ProductForm({ open, product, onClose }: ProductFormProps) {
       sortOrder: 0,
       isFeatured: false,
       isCustomizable: false,
-      isPublished: false,
+      isPublished: true,
     },
   });
   const { register, control, handleSubmit, reset, watch, formState: { errors } } = form;
@@ -150,7 +150,7 @@ export function ProductForm({ open, product, onClose }: ProductFormProps) {
       sortOrder: product?.sort_order ?? 0,
       isFeatured: product?.is_featured ?? false,
       isCustomizable: product?.is_customizable ?? false,
-      isPublished: product?.is_published ?? false,
+      isPublished: product?.is_published ?? true,
     });
     setSelectedFile(null);
     setRemoveImage(false);
