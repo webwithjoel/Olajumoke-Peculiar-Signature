@@ -26,6 +26,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { useAdminCategories, useAdminProducts, type AdminProduct } from '@/hooks/use-admin-products';
+import { clearExpiredAdminSession, isExpiredAdminSession } from '@/lib/admin-session';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 
@@ -78,13 +79,14 @@ function ProductThumbnail({ path, title }: { path: string | null; title: string 
 export function ProductList({ onAddProduct, onEditProduct }: ProductListProps) {
   const queryClient = useQueryClient();
   const { data = [], isLoading, isError, refetch } = useAdminProducts();
-  const { data: categories = [] } = useAdminCategories();
+  const { data: categories = [], isError: categoriesError } = useAdminCategories();
   const { toast } = useToast();
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [deleteCandidate, setDeleteCandidate] = useState<AdminProduct | null>(null);
   const notifiedError = useRef(false);
+  const notifiedCategoryError = useRef(false);
 
   const invalidateProducts = async () => {
     await Promise.all([
@@ -95,8 +97,9 @@ export function ProductList({ onAddProduct, onEditProduct }: ProductListProps) {
 
   const toggleMutation = useMutation({
     mutationFn: async ({ productId, field, value }: { productId: string; field: 'is_featured' | 'is_published'; value: boolean }) => {
-      const { error } = await supabase.from('products').update({ [field]: value }).eq('id', productId);
+      const { data, error } = await supabase.from('products').update({ [field]: value }).eq('id', productId).select('id').maybeSingle();
       if (error) throw error;
+      if (!data) throw new Error('This product no longer exists or could not be updated.');
     },
     onSuccess: async (_data, variables) => {
       await invalidateProducts();
@@ -104,9 +107,13 @@ export function ProductList({ onAddProduct, onEditProduct }: ProductListProps) {
     },
     onError: async (error) => {
       const message = error instanceof Error ? error.message : String(error);
-      if (/jwt expired|invalid jwt|session.*expired/i.test(message)) {
-        await supabase.auth.signOut();
-        toast({ title: 'Session expired', description: 'Please sign in again to continue.', variant: 'destructive' });
+      if (isExpiredAdminSession(error)) {
+        try {
+          await clearExpiredAdminSession();
+          toast({ title: 'Session expired', description: 'Please sign in again to continue.', variant: 'destructive' });
+        } catch {
+          toast({ title: 'Session expired', description: 'Please reload and sign in again.', variant: 'destructive' });
+        }
       } else {
         toast({ title: 'Product setting could not be updated', description: message, variant: 'destructive' });
       }
@@ -115,17 +122,31 @@ export function ProductList({ onAddProduct, onEditProduct }: ProductListProps) {
 
   const deleteMutation = useMutation({
     mutationFn: async (product: AdminProduct) => {
-      const { error } = await supabase.from('products').delete().eq('id', product.id);
+      const { data, error } = await supabase.from('products').delete().eq('id', product.id).select('id').maybeSingle();
       if (error) throw error;
+      if (!data) throw new Error('This product no longer exists or could not be deleted.');
       if (product.image_path) {
         const { error: storageError } = await supabase.storage.from('product-images').remove([product.image_path]);
-        return { storageError: storageError?.message ?? null };
+        return {
+          storageError: storageError?.message ?? null,
+          expired: storageError ? isExpiredAdminSession(storageError) : false,
+        };
       }
-      return { storageError: null };
+      return { storageError: null, expired: false };
     },
     onSuccess: async (result, product) => {
       await invalidateProducts();
       setDeleteCandidate(null);
+      if (result.expired) {
+        try {
+          await clearExpiredAdminSession();
+        } catch {
+          toast({ title: 'Product deleted, but the session expired', description: 'Please reload and sign in again.', variant: 'destructive' });
+          return;
+        }
+        toast({ title: 'Product deleted; session expired', description: 'The image may remain in storage. Please sign in again.', variant: 'destructive' });
+        return;
+      }
       if (result.storageError) {
         toast({
           title: 'Product deleted, but image cleanup failed',
@@ -138,9 +159,13 @@ export function ProductList({ onAddProduct, onEditProduct }: ProductListProps) {
     },
     onError: async (error) => {
       const message = error instanceof Error ? error.message : String(error);
-      if (/jwt expired|invalid jwt|session.*expired/i.test(message)) {
-        await supabase.auth.signOut();
-        toast({ title: 'Session expired', description: 'Please sign in again to continue.', variant: 'destructive' });
+      if (isExpiredAdminSession(error)) {
+        try {
+          await clearExpiredAdminSession();
+          toast({ title: 'Session expired', description: 'Please sign in again to continue.', variant: 'destructive' });
+        } catch {
+          toast({ title: 'Session expired', description: 'Please reload and sign in again.', variant: 'destructive' });
+        }
       } else {
         toast({ title: 'Product could not be deleted', description: message, variant: 'destructive' });
       }
@@ -158,6 +183,18 @@ export function ProductList({ onAddProduct, onEditProduct }: ProductListProps) {
     }
     if (!isError) notifiedError.current = false;
   }, [isError, toast]);
+
+  useEffect(() => {
+    if (categoriesError && !notifiedCategoryError.current) {
+      toast({
+        title: 'Categories could not be loaded',
+        description: 'Category filters may be incomplete. Please retry after refreshing.',
+        variant: 'destructive',
+      });
+      notifiedCategoryError.current = true;
+    }
+    if (!categoriesError) notifiedCategoryError.current = false;
+  }, [categoriesError, toast]);
 
   const filteredProducts = data.filter((product) => {
     const matchesTitle = product.title.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase());

@@ -20,6 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useAdminCategories, type AdminProduct } from '@/hooks/use-admin-products';
+import { clearExpiredAdminSession, isExpiredAdminSession } from '@/lib/admin-session';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 
@@ -87,15 +88,10 @@ function errorMessage(error: unknown) {
   return 'The product could not be saved. Please try again.';
 }
 
-function isExpiredSession(error: unknown) {
-  const message = error instanceof Error ? error.message : String(error);
-  return /jwt expired|invalid jwt|session.*expired/i.test(message);
-}
-
 export function ProductForm({ open, product, onClose }: ProductFormProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { data: categories = [], isLoading: categoriesLoading } = useAdminCategories();
+  const { data: categories = [], isLoading: categoriesLoading, isError: categoriesError, refetch: refetchCategories } = useAdminCategories();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedPreview, setSelectedPreview] = useState('');
   const [removeImage, setRemoveImage] = useState(false);
@@ -179,21 +175,23 @@ export function ProductForm({ open, product, onClose }: ProductFormProps) {
     submitLock.current = true;
     setSaving(true);
     let uploadedPath: string | null = null;
+    let productSaved = false;
     const previousPath = product?.image_path ?? null;
 
     try {
       if (selectedFile) {
         setUploadingImage(true);
         const compressed = await compressImage(selectedFile);
-        uploadedPath = `products/${crypto.randomUUID()}.${compressed.extension}`;
+        const storagePath = `products/${crypto.randomUUID()}.${compressed.extension}`;
         const { error } = await supabase.storage
           .from('product-images')
-          .upload(uploadedPath, compressed.file, {
+          .upload(storagePath, compressed.file, {
             cacheControl: '3600',
             contentType: compressed.file.type,
             upsert: false,
           });
         if (error) throw error;
+        uploadedPath = storagePath;
       }
 
       const imagePath = uploadedPath ?? (removeImage ? null : previousPath);
@@ -209,35 +207,64 @@ export function ProductForm({ open, product, onClose }: ProductFormProps) {
         is_published: values.isPublished,
         image_path: imagePath,
       };
-      const result = product
-        ? await supabase.from('products').update(payload).eq('id', product.id)
-        : await supabase.from('products').insert(payload);
-      if (result.error) throw result.error;
+      if (product) {
+        const { data, error } = await supabase.from('products').update(payload).eq('id', product.id).select('id').maybeSingle();
+        if (error) throw error;
+        if (!data) throw new Error('This product no longer exists or could not be updated.');
+      } else {
+        const { error } = await supabase.from('products').insert(payload).select('id').single();
+        if (error) throw error;
+      }
+      productSaved = true;
 
+      let oldImageCleanupError = '';
       if (previousPath && previousPath !== imagePath) {
-        const { error } = await supabase.storage.from('product-images').remove([previousPath]);
-        if (error) {
-          toast({ title: 'Old image could not be removed', description: 'The product was saved, but its previous image remains in storage.', variant: 'destructive' });
+        try {
+          const { error } = await supabase.storage.from('product-images').remove([previousPath]);
+          if (error) oldImageCleanupError = error.message;
+        } catch (error) {
+          oldImageCleanupError = errorMessage(error);
         }
       }
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['admin', 'products'] }),
-        queryClient.invalidateQueries({ queryKey: ['products'] }),
-      ]);
-      toast({ title: product ? 'Product updated' : 'Product added', description: `${values.title} has been saved.` });
+      try {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['admin', 'products'] }),
+          queryClient.invalidateQueries({ queryKey: ['products'] }),
+        ]);
+      } catch {
+        toast({ title: 'Product saved, but dashboard refresh failed', description: 'Refresh the page to see the latest catalog.', variant: 'destructive' });
+        onClose();
+        return;
+      }
+      if (oldImageCleanupError) {
+        toast({ title: 'Product saved, but old image cleanup failed', description: `The previous image remains in storage: ${oldImageCleanupError}`, variant: 'destructive' });
+      } else {
+        toast({ title: product ? 'Product updated' : 'Product added', description: `${values.title} has been saved.` });
+      }
       onClose();
     } catch (error) {
-      if (uploadedPath) {
-        const { error: cleanupError } = await supabase.storage.from('product-images').remove([uploadedPath]);
-        if (cleanupError) {
-          toast({ title: 'Temporary image cleanup failed', description: 'An uploaded image could not be removed after the save failed.', variant: 'destructive' });
+      let cleanupFailed = false;
+      if (uploadedPath && !productSaved) {
+        try {
+          const { error: cleanupError } = await supabase.storage.from('product-images').remove([uploadedPath]);
+          cleanupFailed = Boolean(cleanupError);
+        } catch {
+          cleanupFailed = true;
         }
       }
-      if (isExpiredSession(error)) {
-        await supabase.auth.signOut();
-        toast({ title: 'Session expired', description: 'Please sign in again to continue.', variant: 'destructive' });
+      if (isExpiredAdminSession(error)) {
+        try {
+          await clearExpiredAdminSession();
+          toast({ title: 'Session expired', description: 'Please sign in again to continue.', variant: 'destructive' });
+        } catch {
+          toast({ title: 'Session expired', description: 'Please reload and sign in again.', variant: 'destructive' });
+        }
       } else {
-        toast({ title: 'Product could not be saved', description: errorMessage(error), variant: 'destructive' });
+        toast({
+          title: productSaved ? 'Product saved, but another step failed' : 'Product could not be saved',
+          description: `${errorMessage(error)}${cleanupFailed ? ' The temporary uploaded image could not be removed.' : ''}`,
+          variant: 'destructive',
+        });
       }
     } finally {
       setUploadingImage(false);
@@ -292,7 +319,14 @@ export function ProductForm({ open, product, onClose }: ProductFormProps) {
                   </Select>
                 )}
               />
-              {errors.categoryId && <p className="text-sm text-destructive" role="alert">{errors.categoryId.message}</p>}
+              {categoriesError ? (
+                <div className="flex items-center justify-between gap-2 text-sm text-destructive">
+                  <span>Categories could not be loaded.</span>
+                  <Button type="button" size="sm" variant="outline" onClick={() => void refetchCategories()} disabled={saving}>Retry</Button>
+                </div>
+              ) : categories.length === 0 ? (
+                <p className="text-sm text-destructive" role="alert">No categories are available. Add a category before creating products.</p>
+              ) : errors.categoryId ? <p className="text-sm text-destructive" role="alert">{errors.categoryId.message}</p> : null}
             </div>
             <div className="space-y-2">
               <Label htmlFor="product-order">Display order</Label>
@@ -372,7 +406,7 @@ export function ProductForm({ open, product, onClose }: ProductFormProps) {
 
           <DialogFooter className="gap-2 border-t border-border pt-4 sm:gap-0">
             <Button type="button" variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
-            <Button type="submit" disabled={saving || categoriesLoading}>
+            <Button type="submit" disabled={saving || categoriesLoading || categoriesError || categories.length === 0}>
               {saving ? 'Saving…' : product ? 'Save changes' : 'Add product'}
             </Button>
           </DialogFooter>

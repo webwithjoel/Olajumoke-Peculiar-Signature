@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ProductList } from '@/components/admin/product-list';
 import { ProductForm } from '@/components/admin/product-form';
 import type { AdminProduct } from '@/hooks/use-admin-products';
+import { clearExpiredAdminSession, isExpiredAdminSession } from '@/lib/admin-session';
 import { supabase } from '@/lib/supabase';
 
 type AdminAccess = 'checking' | 'allowed' | 'denied' | 'failed';
@@ -40,6 +41,8 @@ export default function AdminPage() {
   const [productEditorOpen, setProductEditorOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<AdminProduct | null>(null);
   const checkSequence = useRef(0);
+  const signInLock = useRef(false);
+  const signOutLock = useRef(false);
 
   const checkAdmin = useCallback(async (nextSession: Session | null) => {
     const sequence = ++checkSequence.current;
@@ -51,11 +54,27 @@ export default function AdminPage() {
     }
 
     setAccess('checking');
-    const { data, error } = await supabase.rpc('is_admin');
+    let data: boolean | null = null;
+    let error: Error | null = null;
+    try {
+      const result = await supabase.rpc('is_admin');
+      data = result.data;
+      error = result.error;
+    } catch (requestError) {
+      if (sequence !== checkSequence.current) return;
+      setAccessError('We could not verify your admin access. Please try again.');
+      setAccess('failed');
+      return;
+    }
     if (sequence !== checkSequence.current) return;
     if (error) {
-      if (error.message.includes('JWT') || error.message.toLowerCase().includes('token')) {
-        await supabase.auth.signOut();
+      if (isExpiredAdminSession(error)) {
+        try {
+          await clearExpiredAdminSession();
+        } catch {
+          setAccessError('Your session expired and could not be cleared. Please reload and sign in again.');
+          setAccess('failed');
+        }
         return;
       }
       setAccessError('We could not verify your admin access. Please try again.');
@@ -74,18 +93,21 @@ export default function AdminPage() {
     document.title = 'Admin | Olajumoke Peculiar Signature';
 
     let active = true;
-    void supabase.auth.getSession().then(({ data, error }) => {
-      if (!active) return;
-      if (error) {
+    void (async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (!active) return;
+        if (error) throw error;
+        void checkAdmin(data.session);
+      } catch {
+        if (!active) return;
         setAccessError('Your session could not be loaded. Please sign in again.');
         setAccess('failed');
-        return;
       }
-      void checkAdmin(data.session);
-    });
+    })();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      void checkAdmin(nextSession);
+      window.setTimeout(() => { void checkAdmin(nextSession); }, 0);
     });
     return () => {
       active = false;
@@ -98,29 +120,43 @@ export default function AdminPage() {
 
   const handleSignIn = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (signingIn) return;
+    if (signInLock.current) return;
+    signInLock.current = true;
     setSigningIn(true);
-    const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-    setSigningIn(false);
-    if (error) {
-      toast({ title: 'Unable to sign in', description: signInMessage(error.message), variant: 'destructive' });
-      return;
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+      if (error) {
+        toast({ title: 'Unable to sign in', description: signInMessage(error.message), variant: 'destructive' });
+        return;
+      }
+      setPassword('');
+      toast({ title: 'Signed in', description: 'Checking your admin access.' });
+      void checkAdmin(data.session);
+    } catch {
+      toast({ title: 'Unable to sign in', description: 'Please check your connection and try again.', variant: 'destructive' });
+    } finally {
+      signInLock.current = false;
+      setSigningIn(false);
     }
-    setPassword('');
-    toast({ title: 'Signed in', description: 'Checking your admin access.' });
-    void checkAdmin(data.session);
   };
 
   const handleSignOut = async () => {
-    if (signingOut) return;
+    if (signOutLock.current) return;
+    signOutLock.current = true;
     setSigningOut(true);
-    const { error } = await supabase.auth.signOut();
-    setSigningOut(false);
-    if (error) {
-      toast({ title: 'Could not sign out', description: 'Please try again.', variant: 'destructive' });
-      return;
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        toast({ title: 'Could not sign out', description: 'Please try again.', variant: 'destructive' });
+        return;
+      }
+      toast({ title: 'Signed out' });
+    } catch {
+      toast({ title: 'Could not sign out', description: 'Please check your connection and try again.', variant: 'destructive' });
+    } finally {
+      signOutLock.current = false;
+      setSigningOut(false);
     }
-    toast({ title: 'Signed out' });
   };
 
   const retryAccess = () => {
