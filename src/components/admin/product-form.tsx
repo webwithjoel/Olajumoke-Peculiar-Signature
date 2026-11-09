@@ -28,7 +28,6 @@ import { supabase } from '@/lib/supabase';
 const productSchema = z.object({
   title: z.string().trim().min(1, 'Enter a product title.').max(160, 'Keep the title under 160 characters.'),
   description: z.string().max(5000, 'Keep the description under 5,000 characters.'),
-  alt: z.string().max(250, 'Keep alt text under 250 characters.'),
   priceMode: z.enum(['set', 'request']),
   price: z.string(),
   categoryId: z.string().min(1, 'Choose a category.'),
@@ -110,7 +109,6 @@ export function ProductForm({ open, product, onClose }: ProductFormProps) {
     defaultValues: {
       title: '',
       description: '',
-      alt: '',
       priceMode: 'request',
       price: '',
       categoryId: '',
@@ -120,7 +118,7 @@ export function ProductForm({ open, product, onClose }: ProductFormProps) {
       isPublished: false,
     },
   });
-  const { register, control, handleSubmit, reset, setValue, watch, formState: { errors, touchedFields } } = form;
+  const { register, control, handleSubmit, reset, watch, formState: { errors } } = form;
   const title = watch('title');
   const existingImageUrl = product?.image_path
     ? supabase.storage.from('product-images').getPublicUrl(product.image_path).data.publicUrl
@@ -138,10 +136,6 @@ export function ProductForm({ open, product, onClose }: ProductFormProps) {
   }, [selectedFile]);
 
   useEffect(() => {
-    if (!touchedFields.alt) setValue('alt', title ?? '');
-  }, [setValue, title, touchedFields.alt]);
-
-  useEffect(() => {
     if (!open) {
       setSelectedFile(null);
       setRemoveImage(false);
@@ -150,7 +144,6 @@ export function ProductForm({ open, product, onClose }: ProductFormProps) {
     reset({
       title: product?.title ?? '',
       description: product?.description ?? '',
-      alt: product?.alt ?? product?.title ?? '',
       priceMode: product?.price == null ? 'request' : 'set',
       price: product?.price == null ? '' : String(product.price),
       categoryId: product?.category_id ?? '',
@@ -206,7 +199,7 @@ export function ProductForm({ open, product, onClose }: ProductFormProps) {
       const payload = {
         title: values.title,
         description: values.description.trim() || null,
-        alt: values.alt.trim() || values.title,
+        alt: values.title.trim(),
         price: values.priceMode === 'set' ? Number(values.price) : null,
         category_id: values.categoryId,
         sort_order: values.sortOrder,
@@ -300,11 +293,6 @@ export function ProductForm({ open, product, onClose }: ProductFormProps) {
               <Label htmlFor="product-description">Description</Label>
               <Textarea id="product-description" rows={4} {...register('description')} disabled={saving} />
               {errors.description && <p className="text-sm text-destructive" role="alert">{errors.description.message}</p>}
-            </div>
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="product-alt">Image alt text</Label>
-              <Input id="product-alt" placeholder={title || 'Describe the photo'} {...register('alt')} disabled={saving} aria-invalid={Boolean(errors.alt)} />
-              {errors.alt && <p className="text-sm text-destructive" role="alert">{errors.alt.message}</p>}
             </div>
             <div className="space-y-3 sm:col-span-2">
               <Label>Price <span aria-hidden="true">*</span></Label>
