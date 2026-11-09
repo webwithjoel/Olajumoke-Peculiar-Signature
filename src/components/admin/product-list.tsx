@@ -27,6 +27,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { useAdminCategories, useAdminProducts, type AdminProduct } from '@/hooks/use-admin-products';
 import { clearExpiredAdminSession, isExpiredAdminSession } from '@/lib/admin-session';
+import { formatProductPrice } from '@/lib/product-price';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 
@@ -280,7 +281,7 @@ export function ProductList({ onAddProduct, onEditProduct }: ProductListProps) {
                   <div className="min-w-0 flex-1">
                     <h3 className="truncate font-semibold">{product.title}</h3>
                     <p className="mt-1 text-sm text-muted-foreground">{product.category?.label ?? 'Uncategorized'}</p>
-                    <p className="mt-1 text-sm">{product.price_label ?? 'Price on request'}</p>
+                    <p className="mt-1 text-sm">{formatProductPrice(product.price)}</p>
                     <div className="mt-3 flex flex-wrap gap-1.5">
                       {product.is_featured && <Badge variant="secondary">Featured</Badge>}
                       {product.is_customizable && <Badge variant="outline">Customizable</Badge>}
@@ -307,7 +308,7 @@ export function ProductList({ onAddProduct, onEditProduct }: ProductListProps) {
                 <tr>
                   <th scope="col" className="px-4 py-3 font-semibold">Product</th>
                   <th scope="col" className="px-4 py-3 font-semibold">Category</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Price label</th>
+                  <th scope="col" className="px-4 py-3 font-semibold">Price</th>
                   <th scope="col" className="px-4 py-3 font-semibold">Status</th>
                 </tr>
               </thead>
@@ -327,7 +328,7 @@ export function ProductList({ onAddProduct, onEditProduct }: ProductListProps) {
                       </div>
                     </td>
                     <td className="px-4 py-3">{product.category?.label ?? 'Uncategorized'}</td>
-                    <td className="px-4 py-3">{product.price_label ?? 'Price on request'}</td>
+                    <td className="px-4 py-3">{formatProductPrice(product.price)}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         {product.is_published ? <Badge>Published</Badge> : <Badge variant="destructive">Draft</Badge>}

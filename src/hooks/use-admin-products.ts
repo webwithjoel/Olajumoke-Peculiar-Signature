@@ -8,7 +8,7 @@ export type AdminProduct = {
   title: string;
   description: string | null;
   alt: string | null;
-  price_label: string | null;
+  price: number | null;
   category_id: string;
   image_path: string | null;
   is_featured: boolean;
@@ -30,7 +30,7 @@ async function fetchAdminProducts(): Promise<AdminProduct[]> {
   try {
     const { data, error } = await supabase
       .from('products')
-      .select('id, title, description, alt, price_label, category_id, image_path, is_featured, is_customizable, is_published, sort_order, created_at, category:categories!products_category_id_fkey(id, label)')
+      .select('id, title, description, alt, price, category_id, image_path, is_featured, is_customizable, is_published, sort_order, created_at, category:categories!products_category_id_fkey(id, label)')
       .order('sort_order', { ascending: true })
       .order('created_at', { ascending: false });
 

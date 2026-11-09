@@ -17,6 +17,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useAdminCategories, type AdminProduct } from '@/hooks/use-admin-products';
@@ -28,12 +29,17 @@ const productSchema = z.object({
   title: z.string().trim().min(1, 'Enter a product title.').max(160, 'Keep the title under 160 characters.'),
   description: z.string().max(5000, 'Keep the description under 5,000 characters.'),
   alt: z.string().max(250, 'Keep alt text under 250 characters.'),
-  priceLabel: z.string().trim().min(1, 'Enter a price label.').max(120, 'Keep the price label under 120 characters.'),
+  priceMode: z.enum(['set', 'request']),
+  price: z.string(),
   categoryId: z.string().min(1, 'Choose a category.'),
   sortOrder: z.number().int('Use a whole number.').min(0, 'Display order cannot be negative.'),
   isFeatured: z.boolean(),
   isCustomizable: z.boolean(),
   isPublished: z.boolean(),
+}).superRefine((values, context) => {
+  if (values.priceMode === 'set' && (!Number.isFinite(Number(values.price)) || Number(values.price) <= 0)) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['price'], message: 'Enter a price greater than 0.' });
+  }
 });
 
 type ProductFormValues = z.infer<typeof productSchema>;
@@ -105,7 +111,8 @@ export function ProductForm({ open, product, onClose }: ProductFormProps) {
       title: '',
       description: '',
       alt: '',
-      priceLabel: 'Price on request',
+      priceMode: 'request',
+      price: '',
       categoryId: '',
       sortOrder: 0,
       isFeatured: false,
@@ -144,7 +151,8 @@ export function ProductForm({ open, product, onClose }: ProductFormProps) {
       title: product?.title ?? '',
       description: product?.description ?? '',
       alt: product?.alt ?? product?.title ?? '',
-      priceLabel: product?.price_label ?? 'Price on request',
+      priceMode: product?.price == null ? 'request' : 'set',
+      price: product?.price == null ? '' : String(product.price),
       categoryId: product?.category_id ?? '',
       sortOrder: product?.sort_order ?? 0,
       isFeatured: product?.is_featured ?? false,
@@ -199,7 +207,7 @@ export function ProductForm({ open, product, onClose }: ProductFormProps) {
         title: values.title,
         description: values.description.trim() || null,
         alt: values.alt.trim() || values.title,
-        price_label: values.priceLabel,
+        price: values.priceMode === 'set' ? Number(values.price) : null,
         category_id: values.categoryId,
         sort_order: values.sortOrder,
         is_featured: values.isFeatured,
@@ -298,10 +306,34 @@ export function ProductForm({ open, product, onClose }: ProductFormProps) {
               <Input id="product-alt" placeholder={title || 'Describe the photo'} {...register('alt')} disabled={saving} aria-invalid={Boolean(errors.alt)} />
               {errors.alt && <p className="text-sm text-destructive" role="alert">{errors.alt.message}</p>}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="product-price">Price label <span aria-hidden="true">*</span></Label>
-              <Input id="product-price" {...register('priceLabel')} disabled={saving} aria-invalid={Boolean(errors.priceLabel)} />
-              {errors.priceLabel && <p className="text-sm text-destructive" role="alert">{errors.priceLabel.message}</p>}
+            <div className="space-y-3 sm:col-span-2">
+              <Label>Price <span aria-hidden="true">*</span></Label>
+              <Controller
+                control={control}
+                name="priceMode"
+                render={({ field }) => (
+                  <RadioGroup className="flex flex-col gap-3 sm:flex-row" value={field.value} onValueChange={field.onChange} disabled={saving} aria-label="Product price option">
+                    <Label className="flex min-h-11 items-center gap-2 rounded-md border border-border px-3">
+                      <RadioGroupItem value="set" />
+                      Set a price
+                    </Label>
+                    <Label className="flex min-h-11 items-center gap-2 rounded-md border border-border px-3">
+                      <RadioGroupItem value="request" />
+                      Price on request
+                    </Label>
+                  </RadioGroup>
+                )}
+              />
+              {watch('priceMode') === 'set' && (
+                <div className="space-y-2">
+                  <Label htmlFor="product-price">Price in naira</Label>
+                  <div className="flex min-h-11 items-center rounded-md border border-input">
+                    <span className="px-3 text-muted-foreground" aria-hidden="true">₦</span>
+                    <Input id="product-price" className="border-0 shadow-none focus-visible:ring-0" type="number" min="0.01" step="0.01" inputMode="decimal" {...register('price')} disabled={saving} aria-invalid={Boolean(errors.price)} />
+                  </div>
+                  {errors.price && <p className="text-sm text-destructive" role="alert">{errors.price.message}</p>}
+                </div>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="product-category">Category <span aria-hidden="true">*</span></Label>

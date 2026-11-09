@@ -2,13 +2,14 @@ import { useQuery } from '@tanstack/react-query';
 
 import type { ReadyToWearProduct } from '@/pages/ready-to-wear';
 import { supabase } from '@/lib/supabase';
+import { formatProductPrice } from '@/lib/product-price';
 
 type ProductRow = {
   id: string;
   title: string;
   description: string | null;
   alt: string | null;
-  price_label: string | null;
+  price: number | null;
   image_path: string | null;
   is_featured: boolean | null;
   is_customizable: boolean | null;
@@ -29,7 +30,7 @@ export type Product = ReadyToWearProduct & {
 async function fetchProducts(): Promise<Product[]> {
   const { data, error } = await supabase
     .from('products')
-    .select('id, title, description, alt, price_label, image_path, is_featured, is_customizable, category:categories!products_category_id_fkey(slug, label)')
+    .select('id, title, description, alt, price, image_path, is_featured, is_customizable, category:categories!products_category_id_fkey(slug, label)')
     .eq('is_published', true)
     .order('sort_order', { ascending: true })
     .order('created_at', { ascending: false });
@@ -51,7 +52,7 @@ async function fetchProducts(): Promise<Product[]> {
         : null,
       alt: row.alt ?? row.title,
       description: row.description ?? '',
-      priceLabel: row.price_label ?? 'Price on request',
+      priceLabel: formatProductPrice(row.price),
       isFeatured: row.is_featured ?? false,
       isCustomizable: row.is_customizable ?? false,
     }];
