@@ -33,9 +33,10 @@ import NotFound from '@/pages/not-found';
 import CustomizePage, { type CustomizationRequest } from '@/pages/customize-a-look';
 import ReadyToWearPage, { type ReadyToWearProduct } from '@/pages/ready-to-wear';
 import AboutContactPage from '@/pages/about-contact';
+import { productImageFallback } from '@/lib/product-image';
 
 type Look = {
-  image: string;
+  image: string | null;
   alt: string;
   id?: string;
   title?: string;
@@ -517,7 +518,7 @@ function CategoryCard({
 function LookCard({ look, onSelect }: { look: Look; onSelect: () => void }) {
   return (
     <article className="look-card">
-      <img src={look.image} alt={look.alt} loading="lazy" />
+      <img src={look.image ?? productImageFallback} alt={look.alt} loading="lazy" />
       <div className="look-overlay">
         <button
           type="button"
@@ -568,7 +569,7 @@ function LookModal({
         <button className="form-modal-close" onClick={onClose} aria-label="Close selected look">
           <X size={19} />
         </button>
-        <img src={look.image} alt={look.alt} />
+        <img src={look.image ?? productImageFallback} alt={look.alt} />
         <div className="look-select-copy">
           <p className="eyebrow">Ready-to-wear · Featured look</p>
           <h2 id="look-select-title" className="serif">{lookName(look)}</h2>
@@ -643,7 +644,7 @@ function CartModal({
             <div className="cart-items">
               {items.map((item) => (
                 <article className="cart-item" key={item.id}>
-                  <img src={item.image} alt={item.alt} />
+                  <img src={item.image ?? productImageFallback} alt={item.alt} />
                   <div className="cart-item-copy">
                     <span className="eyebrow">{item.customization ? 'Customization request' : 'Ready-to-wear look'}</span>
                     <h3 className="serif">{lookName(item)}</h3>
@@ -800,7 +801,7 @@ function Lightbox({
           <ArrowRight size={19} />
         </button>
         <div className="lightbox-media">
-          <img src={look.image} alt={look.alt} />
+          <img src={look.image ?? productImageFallback} alt={look.alt} />
         </div>
         <div className="lightbox-copy">
           <span className="eyebrow">
@@ -912,7 +913,7 @@ function Home() {
       const existing = current.find((item) => !item.customization && item.image === look.image);
       return existing
         ? current.map((item) => item.image === look.image ? { ...item, quantity: item.quantity + 1 } : item)
-        : [...current, { ...look, id: look.id ?? look.image, quantity: 1 }];
+        : [...current, { ...look, id: look.id ?? crypto.randomUUID(), quantity: 1 }];
     });
     setSelectedLook(null);
     setCheckoutError('');
@@ -1179,7 +1180,7 @@ Please confirm the order details with me. Thank you.`;
                   aria-label={`Open ${lookName(look)} in the lookbook`}
                   data-testid={`button-lookbook-${index}`}
                 >
-                  <img src={look.image} alt={look.alt} loading="lazy" />
+                  <img src={look.image ?? productImageFallback} alt={look.alt} loading="lazy" />
                   <span>{look.alt}</span>
                 </button>
               ))}

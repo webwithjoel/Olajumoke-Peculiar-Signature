@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowUpRight, Check, Image as ImageIcon, ShoppingBag, X } from 'lucide-react';
 
+import { productImageFallback } from '@/lib/product-image';
 import './ready-to-wear.css';
 
 export type ReadyToWearProduct = {
@@ -9,7 +10,7 @@ export type ReadyToWearProduct = {
   category: string;
   categoryLabel: string;
   title: string;
-  image: string;
+  image: string | null;
   alt: string;
   description: string;
   priceLabel: string;
@@ -113,7 +114,7 @@ function ProductModal({
           <X size={19} strokeWidth={1.6} />
         </button>
         <div className="rtw-modal-media">
-          <img src={product.image} alt={product.alt} />
+          <img src={product.image ?? productImageFallback} alt={product.alt} />
         </div>
         <div className="rtw-modal-copy">
           <p className="rtw-modal-category">{product.categoryLabel}</p>
@@ -331,7 +332,7 @@ export default function ReadyToWearPage({
                       aria-label={`View a larger image and details for ${product.title}`}
                       data-testid={`button-view-look-${product.id}`}
                     >
-                      <img src={product.image} alt={product.alt} loading={productIndex > 1 ? 'lazy' : 'eager'} />
+                      <img src={product.image ?? productImageFallback} alt={product.alt} loading={productIndex > 1 ? 'lazy' : 'eager'} />
                       <span className="rtw-image-hint"><ImageIcon size={14} /> View the look</span>
                     </button>
                     <div className="rtw-product-info">

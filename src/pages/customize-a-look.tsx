@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { ArrowDown, ArrowRight, Check, Scissors, ShoppingBag, Sparkles } from 'lucide-react';
 import { Link } from 'wouter';
 
+import { productImageFallback } from '@/lib/product-image';
 import type { ReadyToWearProduct } from './ready-to-wear';
 import './customize-a-look.css';
 
@@ -101,7 +102,7 @@ function RequestForm({
       <div className="customize-form-layout">
         <aside className="customize-selected-look" aria-label={`Selected look: ${product.title}`}>
           <div className="customize-selected-image">
-            <img src={product.image} alt={product.alt} />
+            <img src={product.image ?? productImageFallback} alt={product.alt} />
           </div>
           <div className="customize-selected-details">
             <p className="eyebrow">{product.categoryLabel} · Selected look</p>
@@ -328,7 +329,7 @@ export default function CustomizePage({ products, readyToWearHref, onAddCustomiz
           {activeProduct && (
             <article className="customize-product-card" id={`customize-product-${activeProduct.id}`} role="tabpanel" aria-labelledby={`customize-category-${activeProduct.category}`}>
               <div className="customize-product-image">
-                <img src={activeProduct.image} alt={activeProduct.alt} />
+                <img src={activeProduct.image ?? productImageFallback} alt={activeProduct.alt} />
                 <span className="customize-product-index">Peculiar · {String(categories.indexOf(activeProduct) + 1).padStart(2, '0')}</span>
               </div>
               <div className="customize-product-details">
