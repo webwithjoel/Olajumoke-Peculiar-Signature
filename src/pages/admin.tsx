@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { ProductList } from '@/components/admin/product-list';
 import { supabase } from '@/lib/supabase';
 
 type AdminAccess = 'checking' | 'allowed' | 'denied' | 'failed';
@@ -194,10 +195,7 @@ export default function AdminPage() {
             <p className="mt-2 text-sm text-muted-foreground">This account is not permitted to manage products.</p>
           </section>
         ) : (
-          <section className="rounded-lg border border-border bg-card p-6">
-            <h2 className="serif text-3xl">Welcome back</h2>
-            <p className="mt-2 text-sm text-muted-foreground">Your product dashboard is ready.</p>
-          </section>
+          <ProductList onAddProduct={() => toast({ title: 'Product editor', description: 'Product creation is being prepared.' })} />
         )}
       </div>
     </main>
