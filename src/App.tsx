@@ -34,6 +34,7 @@ import CustomizePage, { type CustomizationRequest } from '@/pages/customize-a-lo
 import ReadyToWearPage, { type ReadyToWearProduct } from '@/pages/ready-to-wear';
 import AboutContactPage from '@/pages/about-contact';
 import { productImageFallback } from '@/lib/product-image';
+import { useCategories } from '@/hooks/use-categories';
 
 type Look = {
   image: string | null;
@@ -193,43 +194,29 @@ const possibilities = [
   },
 ];
 
-const categories = [
-  {
-    title: 'Bridal',
-    copy: 'For the bride and every beautiful moment around her.',
-    slug: 'bridal',
-    image: bridalGroup,
-    alt: 'Bridal party in coordinated lavender looks',
-  },
-  {
-    title: 'Owambe & Traditional',
-    copy: 'Traditional styles for celebrations and special moments.',
-    slug: 'owambe-traditional',
-    image: purpleTraditional,
-    alt: 'Woman in a richly embroidered purple traditional outfit',
-  },
-  {
-    title: 'Dinner & Special Occasions',
-    copy: 'Considered looks for evenings and occasions worth remembering.',
-    slug: 'dinner-special-occasions',
-    image: limeLook,
-    alt: 'Woman in a lime green lace evening gown with a matching gele',
-  },
-  {
-    title: 'Corporate & Formal',
-    copy: 'Elegant fashion for work, formal occasions and everything in between.',
-    slug: 'corporate-formal',
-    image: purplePortrait,
-    alt: 'Woman in a purple structured dress',
-  },
-  {
-    title: 'Headpieces & Fascinators',
-    copy: 'Fascinators, hatinators and statement headpieces to complete the look.',
-    slug: 'headpieces-fascinators',
-    image: aquaLook,
-    alt: 'Woman in a turquoise look with a sculptural headpiece',
-  },
-];
+const categoryIdToSlug: Record<string, string> = {
+  bridal: 'bridal',
+  'owambe-traditional': 'owambe-traditional',
+  'dinner-special-occasions': 'dinner-special-occasions',
+  'corporate-formal': 'corporate-formal',
+  'headpieces-fascinators': 'headpieces-fascinators',
+};
+
+const categoryImages: Record<string, string> = {
+  bridal: bridalGroup,
+  'owambe-traditional': purpleTraditional,
+  'dinner-special-occasions': limeLook,
+  'corporate-formal': purplePortrait,
+  'headpieces-fascinators': aquaLook,
+};
+
+const categoryImageAlts: Record<string, string> = {
+  bridal: 'Bridal party in coordinated lavender looks',
+  'owambe-traditional': 'Woman in a richly embroidered purple traditional outfit',
+  'dinner-special-occasions': 'Woman in a lime green lace evening gown with a matching gele',
+  'corporate-formal': 'Woman in a purple structured dress',
+  'headpieces-fascinators': 'Woman in a turquoise look with a sculptural headpiece',
+};
 
 const readyToWearProducts: ReadyToWearProduct[] = [
   {
@@ -502,7 +489,13 @@ function CategoryCard({
   slug,
   image,
   alt,
-}: (typeof categories)[number]) {
+}: {
+  title: string;
+  copy: string;
+  slug: string;
+  image: string;
+  alt: string;
+}) {
   return (
     <Link className="category-card" href={getCategoryHref(slug)} aria-label={`Browse ${title} ready-to-wear`}>
       <img src={image} alt={alt} loading="lazy" />
@@ -826,6 +819,19 @@ function Lightbox({
 }
 
 function Home() {
+  const { data: categoryData = [] } = useCategories();
+  const categories = categoryData.flatMap((category) => {
+    const slug = categoryIdToSlug[category.slug];
+    const image = categoryImages[slug];
+    if (!slug || !image) return [];
+    return [{
+      title: category.label,
+      copy: category.description ?? '',
+      slug,
+      image,
+      alt: categoryImageAlts[slug] ?? category.label,
+    }];
+  });
   const [location] = useLocation();
   const currentPath = location.split(/[?#]/, 1)[0].replace(/\/+$/, '') || '/';
   const collectionPath = readyToWearHref.replace(/\/+$/, '') || '/';
@@ -1102,7 +1108,7 @@ Please confirm the order details with me. Thank you.`;
             </div>
             <div className="category-grid">
               {categories.map((category) => (
-                <CategoryCard key={category.title} {...category} />
+                <CategoryCard key={category.slug} {...category} />
               ))}
             </div>
           </div>
@@ -1277,6 +1283,7 @@ Please confirm the order details with me. Thank you.`;
         </Route>
         <Route path={readyToWearHref}>
           <ReadyToWearPage
+            categories={categoryData}
             products={readyToWearProducts}
             onAddToCart={(product) => addToCart(product, false)}
             onOpenCart={() => setCartOpen(true)}
@@ -1285,6 +1292,7 @@ Please confirm the order details with me. Thank you.`;
         </Route>
         <Route path={customizeLookHref}>
           <CustomizePage
+            categories={categoryData}
             products={readyToWearProducts}
             readyToWearHref={readyToWearHref}
             onAddCustomizedToCart={addCustomizedToCart}

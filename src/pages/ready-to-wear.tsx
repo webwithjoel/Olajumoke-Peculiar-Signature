@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowUpRight, Check, Image as ImageIcon, ShoppingBag, X } from 'lucide-react';
 
 import { productImageFallback } from '@/lib/product-image';
+import type { Category } from '@/hooks/use-categories';
 import './ready-to-wear.css';
 
 export type ReadyToWearProduct = {
@@ -17,6 +18,7 @@ export type ReadyToWearProduct = {
 };
 
 type ReadyToWearPageProps = {
+  categories: Category[];
   products: ReadyToWearProduct[];
   onAddToCart: (product: ReadyToWearProduct) => void;
   onOpenCart: () => void;
@@ -138,24 +140,19 @@ function ProductModal({
 }
 
 export default function ReadyToWearPage({
+  categories: categoryData,
   products,
   onAddToCart,
   onOpenCart,
   cartCount,
 }: ReadyToWearPageProps) {
   const categories = useMemo<ProductCategory[]>(() => {
-    const groups = new Map<string, ProductCategory>();
-    products.forEach((product) => {
-      const id = product.category;
-      const category = groups.get(id);
-      if (category) {
-        category.products.push(product);
-      } else {
-        groups.set(id, { id, label: product.categoryLabel, products: [product] });
-      }
-    });
-    return Array.from(groups.values());
-  }, [products]);
+    return categoryData.map((category) => ({
+      id: category.slug,
+      label: category.label,
+      products: products.filter((product) => product.category === category.slug),
+    }));
+  }, [categoryData, products]);
 
   const [activeCategory, setActiveCategory] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<ReadyToWearProduct | null>(null);

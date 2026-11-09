@@ -3,6 +3,7 @@ import { ArrowDown, ArrowRight, Check, Scissors, ShoppingBag, Sparkles } from 'l
 import { Link } from 'wouter';
 
 import { productImageFallback } from '@/lib/product-image';
+import type { Category } from '@/hooks/use-categories';
 import type { ReadyToWearProduct } from './ready-to-wear';
 import './customize-a-look.css';
 
@@ -18,6 +19,7 @@ export type CustomizationRequest = {
 };
 
 type CustomizePageProps = {
+  categories: Category[];
   products: ReadyToWearProduct[];
   readyToWearHref: string;
   onAddCustomizedToCart: (product: ReadyToWearProduct, request: CustomizationRequest) => void;
@@ -211,18 +213,28 @@ function RequestForm({
   );
 }
 
-export default function CustomizePage({ products, readyToWearHref, onAddCustomizedToCart, onOpenCart }: CustomizePageProps) {
+export default function CustomizePage({ categories: categoryData, products, readyToWearHref, onAddCustomizedToCart, onOpenCart }: CustomizePageProps) {
   const categories = useMemo(() => {
-    const seen = new Set<string>();
-    return products.filter((product) => {
-      if (seen.has(product.category)) return false;
-      seen.add(product.category);
-      return true;
+    return categoryData.flatMap((category) => {
+      const categoryProducts = products.filter((product) => product.category === category.slug);
+      if (categoryProducts.length === 0) return [];
+      return [{
+        category: category.slug,
+        categoryLabel: category.label,
+        products: categoryProducts,
+      }];
     });
-  }, [products]);
-  const [activeCategory, setActiveCategory] = useState(categories[0]?.category ?? '');
+  }, [categoryData, products]);
+  const [activeCategory, setActiveCategory] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<ReadyToWearProduct | null>(null);
-  const activeProduct = categories.find((product) => product.category === activeCategory);
+  const activeProduct = categories.find((category) => category.category === activeCategory)?.products[0];
+  const activeCategoryIndex = categories.findIndex((category) => category.category === activeCategory);
+
+  useEffect(() => {
+    if (!categories.some((category) => category.category === activeCategory)) {
+      setActiveCategory(categories[0]?.category ?? '');
+    }
+  }, [activeCategory, categories]);
 
   useEffect(() => {
     if (selectedProduct) {
@@ -309,18 +321,18 @@ export default function CustomizePage({ products, readyToWearHref, onAddCustomiz
 
           <div className={`customize-category-bar${selectedProduct ? ' has-selected-look' : ''}`}>
             <div className="customize-category-tabs" role="tablist" aria-label="Ready-to-Wear categories">
-              {categories.map((product) => (
+              {categories.map((category) => (
                 <button
-                  key={product.category}
-                  id={`customize-category-${product.category}`}
-                  className={`customize-category-tab${activeCategory === product.category ? ' is-active' : ''}`}
+                  key={category.category}
+                  id={`customize-category-${category.category}`}
+                  className={`customize-category-tab${activeCategory === category.category ? ' is-active' : ''}`}
                   type="button"
                   role="tab"
-                  aria-selected={activeCategory === product.category}
-                  aria-controls={`customize-product-${product.id}`}
-                  onClick={() => setActiveCategory(product.category)}
+                  aria-selected={activeCategory === category.category}
+                  aria-controls={`customize-product-${category.products[0].id}`}
+                  onClick={() => setActiveCategory(category.category)}
                 >
-                  {product.categoryLabel}
+                  {category.categoryLabel}
                 </button>
               ))}
             </div>
@@ -330,7 +342,7 @@ export default function CustomizePage({ products, readyToWearHref, onAddCustomiz
             <article className="customize-product-card" id={`customize-product-${activeProduct.id}`} role="tabpanel" aria-labelledby={`customize-category-${activeProduct.category}`}>
               <div className="customize-product-image">
                 <img src={activeProduct.image ?? productImageFallback} alt={activeProduct.alt} />
-                <span className="customize-product-index">Peculiar · {String(categories.indexOf(activeProduct) + 1).padStart(2, '0')}</span>
+                <span className="customize-product-index">Peculiar · {String(activeCategoryIndex + 1).padStart(2, '0')}</span>
               </div>
               <div className="customize-product-details">
                 <p className="eyebrow">{activeProduct.categoryLabel} · Ready-to-Wear</p>
