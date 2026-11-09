@@ -48,6 +48,7 @@ type Look = {
 
 type CartItem = Look & {
   id: string;
+  productId: string;
   quantity: number;
   customization?: CustomizationRequest;
 };
@@ -101,6 +102,18 @@ function formatDate(date: string) {
 
 function lookName(look: Look) {
   return look.title ?? 'Peculiar Look';
+}
+
+function isCartItem(value: unknown): value is CartItem {
+  if (typeof value !== 'object' || value === null) return false;
+  const item = value as Record<string, unknown>;
+  return typeof item.id === 'string'
+    && typeof item.productId === 'string'
+    && typeof item.quantity === 'number'
+    && Number.isInteger(item.quantity)
+    && item.quantity > 0
+    && (item.image === null || typeof item.image === 'string')
+    && typeof item.alt === 'string';
 }
 
 function getCategoryHref(slug: string) {
@@ -796,7 +809,9 @@ function Home() {
     try {
       const stored = window.localStorage.getItem(cartStorageKey);
       const parsed = stored ? JSON.parse(stored) : [];
-      return Array.isArray(parsed) ? (parsed as CartItem[]) : [];
+      if (Array.isArray(parsed) && parsed.every(isCartItem)) return parsed;
+      window.localStorage.removeItem(cartStorageKey);
+      return [];
     } catch {
       return [];
     }
@@ -861,11 +876,14 @@ function Home() {
   }, [isCollectionPage, isCustomizePage, isAboutPage]);
 
   const addToCart = (look: Look, openCart = true) => {
+    const productId = look.id ?? crypto.randomUUID();
     setCartItems((current) => {
-      const existing = current.find((item) => !item.customization && item.image === look.image);
+      const existing = current.find((item) => !item.customization && item.productId === productId);
       return existing
-        ? current.map((item) => item.image === look.image ? { ...item, quantity: item.quantity + 1 } : item)
-        : [...current, { ...look, id: look.id ?? crypto.randomUUID(), quantity: 1 }];
+        ? current.map((item) => !item.customization && item.productId === productId
+          ? { ...item, quantity: item.quantity + 1 }
+          : item)
+        : [...current, { ...look, id: productId, productId, quantity: 1 }];
     });
     setSelectedLook(null);
     setCheckoutError('');
@@ -878,6 +896,7 @@ function Home() {
       {
         ...product,
         id: `custom-${product.id}-${crypto.randomUUID()}`,
+        productId: product.id,
         quantity: customization.quantity,
         customization,
       },
